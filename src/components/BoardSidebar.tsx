@@ -27,8 +27,10 @@ export function BoardSidebar() {
           return (
             <li key={board.id} className="mb-1">
               <div
-                className={`group flex items-center gap-1 rounded-md px-2 py-1.5 ${
-                  active ? 'bg-slate-100' : 'hover:bg-slate-50'
+                className={`group flex items-center gap-1 rounded-md border px-2 py-1.5 ${
+                  active
+                    ? 'border-slate-300 bg-slate-100 shadow-sm'
+                    : 'border-transparent hover:bg-slate-50'
                 }`}
               >
                 <button

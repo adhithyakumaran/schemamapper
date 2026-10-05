@@ -7,7 +7,7 @@ import { BoardDialog } from './components/dialogs/BoardDialog'
 import { DeleteNodeDialog } from './components/dialogs/DeleteNodeDialog'
 import { EditNodeDialog } from './components/dialogs/EditNodeDialog'
 import { NoteDialog } from './components/dialogs/NoteDialog'
-import { ScreenshotDialog } from './components/dialogs/ScreenshotDialog'
+import { EvidenceDialog } from './components/dialogs/EvidenceDialog'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
@@ -59,7 +59,7 @@ export default function App() {
       <AddNodeDialog />
       <EditNodeDialog />
       <NoteDialog />
-      <ScreenshotDialog />
+      <EvidenceDialog />
       <DeleteNodeDialog />
       <NodeMenu />
     </div>

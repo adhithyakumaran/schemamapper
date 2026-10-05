@@ -29,10 +29,15 @@ interface SchemaStore extends AppData {
   updateNode: (
     nodeId: string,
     patch: Partial<
-      Pick<SchemaNode, 'name' | 'note' | 'screenshot' | 'parentId'>
+      Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId'>
     >,
   ) => void
   updateNodePosition: (nodeId: string, x: number, y: number) => void
+  addScreenshots: (nodeId: string, screenshots: string[]) => void
+  removeScreenshotAt: (nodeId: string, index: number) => void
+  addConnection: (source: string, target: string) => void
+  removeConnection: (connectionId: string) => void
+  setBoardColor: (boardId: string, color: string) => void
   deleteNode: (nodeId: string) => void
   importBoard: (board: Board) => void
   replaceActiveBoard: (board: Board) => void
@@ -181,6 +186,69 @@ export const useSchemaStore = create<SchemaStore>()(
         if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
 
+      addScreenshots: (nodeId, screenshots) => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.addScreenshots(b, nodeId, screenshots),
+          ),
+        }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+      },
+
+      removeScreenshotAt: (nodeId, index) => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.removeScreenshotAt(b, nodeId, index),
+          ),
+        }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+      },
+
+      addConnection: (source, target) => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.addConnection(b, source, target),
+          ),
+        }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+      },
+
+      removeConnection: (connectionId) => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.removeConnection(b, connectionId),
+          ),
+        }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+      },
+
+      setBoardColor: (boardId, color) => {
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, boardId, (b) =>
+            schema.setBoardColor(b, color),
+          ),
+        }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === boardId)
+        if (board) schedulePersistBoard(board, boardFiles[boardId], filePersistence)
+      },
+
       deleteNode: (nodeId) => {
         const { activeBoardId } = get()
         if (!activeBoardId) return
@@ -221,7 +289,7 @@ export const useSchemaStore = create<SchemaStore>()(
       },
     }),
     {
-      name: 'schema-mapper-v2',
+      name: 'schema-mapper-v3',
       partialize: (state) => ({
         boards: state.boards,
         activeBoardId: state.activeBoardId,

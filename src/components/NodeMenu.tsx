@@ -51,7 +51,7 @@ export function NodeMenu() {
       {item('Edit', () => setDialog({ type: 'edit', nodeId }))}
       {item('Add Child', () => setDialog({ type: 'addChild', parentId: nodeId }))}
       {item('Add Note', () => setDialog({ type: 'note', nodeId }))}
-      {item('Attach Screenshot', () => setDialog({ type: 'screenshot', nodeId }))}
+      {item('Manage Evidence', () => setDialog({ type: 'evidence', nodeId }))}
       {item('Delete', () => setDialog({ type: 'deleteNode', nodeId }))}
     </div>
   )

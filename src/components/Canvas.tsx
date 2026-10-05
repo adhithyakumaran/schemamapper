@@ -1,5 +1,6 @@
 import {
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
   type Connection,
@@ -8,7 +9,6 @@ import {
   type OnEdgesChange,
   type OnNodesChange,
   type ReactFlowInstance,
-  applyEdgeChanges,
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SchemaNode, type SchemaNodeData } from './nodes/SchemaNode'
@@ -18,13 +18,18 @@ import { syncEdgesFromParents } from '../lib/tree'
 
 const nodeTypes = { schema: SchemaNode }
 
+function isHierarchyEdgeId(id: string): boolean {
+  return id.startsWith('edge-')
+}
+
 export function Canvas() {
   const board = useSchemaStore((s) =>
     s.boards.find((b) => b.id === s.activeBoardId) ?? null,
   )
   const updateNodePosition = useSchemaStore((s) => s.updateNodePosition)
   const setDialog = useSchemaStore((s) => s.setDialog)
-  const updateNode = useSchemaStore((s) => s.updateNode)
+  const addConnection = useSchemaStore((s) => s.addConnection)
+  const removeConnection = useSchemaStore((s) => s.removeConnection)
 
   const [rf, setRf] = useState<ReactFlowInstance | null>(null)
 
@@ -38,20 +43,43 @@ export function Canvas() {
         label: n.name,
         schemaNodeId: n.id,
         hasNote: Boolean(n.note?.trim()),
-        hasImage: Boolean(n.screenshot),
+        evidenceCount: n.screenshots?.length ?? 0,
       } satisfies SchemaNodeData,
     }))
   }, [board])
 
   const flowEdges: Edge[] = useMemo(() => {
     if (!board) return []
-    return syncEdgesFromParents(board.nodes).map((e) => ({
+    const hierarchy = syncEdgesFromParents(board.nodes).map((e) => ({
       id: e.id,
       source: e.source,
       target: e.target,
+      sourceHandle: 'hierarchy-out',
+      targetHandle: 'hierarchy-in',
       type: 'smoothstep',
-      style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+      deletable: false,
+      selectable: true,
+      focusable: false,
+      className: 'hierarchy-edge',
+      style: { stroke: '#64748b', strokeWidth: 1.5 },
     }))
+    const relations = (board.connections ?? []).map((c) => ({
+      id: c.id,
+      source: c.source,
+      target: c.target,
+      sourceHandle: 'rel-source',
+      targetHandle: 'rel-target',
+      type: 'default',
+      deletable: true,
+      selectable: true,
+      className: 'relationship-edge',
+      style: {
+        stroke: '#6366f1',
+        strokeWidth: 2,
+        strokeDasharray: '6 4',
+      },
+    }))
+    return [...hierarchy, ...relations]
   }, [board])
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -68,26 +96,35 @@ export function Canvas() {
   const onEdgesChange: OnEdgesChange = useCallback(
     (changes) => {
       for (const change of changes) {
-        if (change.type === 'remove') {
-          const edge = flowEdges.find((e) => e.id === change.id)
-          if (edge) {
-            updateNode(edge.target, { parentId: null })
-          }
+        if (change.type === 'remove' && !isHierarchyEdgeId(change.id)) {
+          removeConnection(change.id)
         }
       }
-      applyEdgeChanges(changes, flowEdges)
     },
-    [flowEdges, updateNode],
+    [removeConnection],
   )
 
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return
       if (connection.source === connection.target) return
-      updateNode(connection.target, { parentId: connection.source })
+      if (
+        connection.sourceHandle !== 'rel-source' ||
+        connection.targetHandle !== 'rel-target'
+      ) {
+        return
+      }
+      addConnection(connection.source, connection.target)
     },
-    [updateNode],
+    [addConnection],
   )
+
+  const isValidConnection = useCallback((connection: Edge | Connection) => {
+    return (
+      connection.sourceHandle === 'rel-source' &&
+      connection.targetHandle === 'rel-target'
+    )
+  }, [])
 
   useEffect(() => {
     if (rf && board && board.nodes.length > 0) {
@@ -106,8 +143,10 @@ export function Canvas() {
     )
   }
 
+  const bgColor = board.color ?? '#F8FAFC'
+
   return (
-    <div className="relative flex-1 bg-[#fafafa]">
+    <div className="relative flex-1" style={{ backgroundColor: bgColor }}>
       <CanvasToolbar
         rf={rf}
         onAddNode={() => setDialog({ type: 'addRoot' })}
@@ -120,15 +159,27 @@ export function Canvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        onEdgeContextMenu={(e, edge) => {
+          e.preventDefault()
+          if (!isHierarchyEdgeId(edge.id)) removeConnection(edge.id)
+        }}
         onNodeDoubleClick={(_, node) =>
           setDialog({ type: 'edit', nodeId: node.id })
         }
         fitView
         minZoom={0.2}
         maxZoom={2}
+        nodesDeletable={false}
+        edgesFocusable
         proOptions={{ hideAttribution: true }}
       >
-        <Background gap={20} size={1} color="#e2e8f0" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1.2}
+          color="rgba(100, 116, 139, 0.22)"
+        />
         <Controls showInteractive={false} className="!shadow-sm" />
       </ReactFlow>
     </div>

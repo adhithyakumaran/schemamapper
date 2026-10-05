@@ -1,4 +1,5 @@
 import { layoutSubtree } from '../lib/tree'
+import { DEFAULT_BOARD_COLOR } from '../types/schema'
 import type { Board, SchemaNode } from '../types/schema'
 
 const BOARD_ID = 'board-katalon-example'
@@ -14,11 +15,11 @@ function node(
     parentId,
     position: { x: 0, y: 0 },
     note: '',
-    screenshot: null,
+    screenshots: [],
   }
 }
 
-/** Seed data mirrored in data/boards/katalon-example.json for Cursor editing. */
+/** Fallback seed when project JSON is unavailable (mirrors katalon-example.json). */
 export function createKatalonExampleBoard(): Board {
   const root = node('node-katalon-studio', 'Katalon Studio', null)
   const menuBar = node('node-menu-bar', 'Menu Bar', root.id)
@@ -55,6 +56,8 @@ export function createKatalonExampleBoard(): Board {
   return {
     id: BOARD_ID,
     name: 'Katalon Example',
+    color: DEFAULT_BOARD_COLOR,
     nodes,
+    connections: [],
   }
 }

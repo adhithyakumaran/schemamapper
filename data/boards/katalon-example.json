@@ -1,6 +1,7 @@
 {
   "id": "board-katalon-example",
   "name": "Katalon Example",
+  "color": "#E8F5E9",
   "nodes": [
     {
       "id": "node-katalon-studio",
@@ -11,7 +12,7 @@
         "y": 40
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-menu-bar",
@@ -22,7 +23,7 @@
         "y": 180
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-file",
@@ -33,7 +34,7 @@
         "y": 320
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-new",
@@ -44,7 +45,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-project",
@@ -55,7 +56,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-folder",
@@ -66,7 +67,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-api-collection",
@@ -77,7 +78,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test-case",
@@ -88,7 +89,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test-suite",
@@ -99,7 +100,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test-suite-collection",
@@ -110,7 +111,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test-object",
@@ -121,7 +122,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-web-service-request",
@@ -132,7 +133,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test-data",
@@ -143,7 +144,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-package",
@@ -154,7 +155,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-keyword",
@@ -165,7 +166,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-groovy-script",
@@ -176,7 +177,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-bdd-feature-file",
@@ -187,7 +188,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-checkpoint",
@@ -198,7 +199,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-new-sample-project",
@@ -209,7 +210,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-api-tests",
@@ -220,7 +221,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-bdd-cucumber",
@@ -231,7 +232,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-web-ui-cart",
@@ -242,7 +243,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-web-ui-healthcare",
@@ -253,7 +254,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-visual-testops",
@@ -264,7 +265,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-android",
@@ -275,7 +276,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-ios",
@@ -286,7 +287,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-sample-ai-assistant",
@@ -297,7 +298,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-open-project",
@@ -308,7 +309,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-import-selenium-ide",
@@ -319,7 +320,7 @@
         "y": 460
       },
       "note": "Observed disabled in captured screenshot.",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-clean-up",
@@ -330,7 +331,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-save",
@@ -341,7 +342,7 @@
         "y": 460
       },
       "note": "Observed disabled in captured screenshot.",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-save-all",
@@ -352,7 +353,7 @@
         "y": 460
       },
       "note": "Observed disabled in captured screenshot.",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-import-settings",
@@ -363,7 +364,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-import-keywords",
@@ -374,7 +375,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-import-keywords-folder",
@@ -385,7 +386,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-import-keywords-git",
@@ -396,7 +397,7 @@
         "y": 600
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-test",
@@ -407,7 +408,7 @@
         "y": 460
       },
       "note": "Observed as a project/recent-project entry in the captured File menu. Visible path: C:\\Users\\adhit\\Katalon Studio\\recorder",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-quit",
@@ -418,7 +419,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-action",
@@ -429,7 +430,7 @@
         "y": 320
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-spy",
@@ -440,7 +441,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-record",
@@ -451,7 +452,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-run",
@@ -462,7 +463,7 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     },
     {
       "id": "node-debug",
@@ -473,7 +474,8 @@
         "y": 460
       },
       "note": "",
-      "screenshot": null
+      "screenshots": []
     }
-  ]
+  ],
+  "connections": []
 }

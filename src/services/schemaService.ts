@@ -1,6 +1,12 @@
 import { createId } from '../lib/ids'
 import { getDescendantIds } from '../lib/tree'
-import type { Board, BoardDocument, SchemaNode } from '../types/schema'
+import {
+  DEFAULT_BOARD_COLOR,
+  type Board,
+  type BoardDocument,
+  type SchemaConnection,
+  type SchemaNode,
+} from '../types/schema'
 
 export function slugifyBoardName(name: string): string {
   const slug = name
@@ -10,17 +16,65 @@ export function slugifyBoardName(name: string): string {
   return slug || 'board'
 }
 
+function normalizeNode(raw: Record<string, unknown>): SchemaNode {
+  const legacyImage = raw.image as string | null | undefined
+  const legacyScreenshot = raw.screenshot as string | null | undefined
+  let screenshots: string[] = []
+  if (Array.isArray(raw.screenshots)) {
+    screenshots = (raw.screenshots as unknown[])
+      .filter((s) => typeof s === 'string' && s.length > 0)
+      .map(String)
+  } else if (legacyScreenshot) {
+    screenshots = [legacyScreenshot]
+  } else if (legacyImage) {
+    screenshots = [legacyImage]
+  }
+
+  return {
+    id: String(raw.id),
+    name: String(raw.name),
+    parentId:
+      raw.parentId === null || raw.parentId === undefined
+        ? null
+        : String(raw.parentId),
+    position: {
+      x: Number((raw.position as { x?: number })?.x ?? 0),
+      y: Number((raw.position as { y?: number })?.y ?? 0),
+    },
+    note: String(raw.note ?? ''),
+    screenshots,
+  }
+}
+
+function normalizeConnections(raw: unknown): SchemaConnection[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((c) => c as Record<string, unknown>)
+    .filter((c) => c.source && c.target)
+    .map((c) => ({
+      id: String(c.id ?? createId('connection')),
+      source: String(c.source),
+      target: String(c.target),
+    }))
+}
+
 export function boardToDocument(board: Board): BoardDocument {
   return {
     id: board.id,
     name: board.name,
+    color: board.color ?? DEFAULT_BOARD_COLOR,
     nodes: board.nodes.map((n) => ({
       id: n.id,
       name: n.name,
       parentId: n.parentId,
       position: { ...n.position },
       note: n.note ?? '',
-      screenshot: n.screenshot ?? null,
+      screenshots: [...(n.screenshots ?? [])],
+    })),
+    connections: (board.connections ?? []).map((c) => ({
+      id: c.id,
+      source: c.source,
+      target: c.target,
     })),
   }
 }
@@ -29,7 +83,6 @@ export function exportBoardJson(board: Board): string {
   return JSON.stringify(boardToDocument(board), null, 2)
 }
 
-/** Accept exported JSON or legacy shapes (image field, optional edges). */
 export function normalizeImportedBoard(raw: unknown): Board {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Invalid board JSON')
@@ -39,31 +92,14 @@ export function normalizeImportedBoard(raw: unknown): Board {
     throw new Error('Board must include name and nodes')
   }
 
-  const nodes: SchemaNode[] = (obj.nodes as Record<string, unknown>[]).map(
-    (n) => {
-      const legacyImage = n.image as string | null | undefined
-      const screenshot =
-        (n.screenshot as string | null | undefined) ?? legacyImage ?? null
-      return {
-        id: String(n.id),
-        name: String(n.name),
-        parentId: n.parentId === null || n.parentId === undefined
-          ? null
-          : String(n.parentId),
-        position: {
-          x: Number((n.position as { x?: number })?.x ?? 0),
-          y: Number((n.position as { y?: number })?.y ?? 0),
-        },
-        note: String(n.note ?? ''),
-        screenshot,
-      }
-    },
-  )
+  const nodes = (obj.nodes as Record<string, unknown>[]).map(normalizeNode)
 
   return {
     id: String(obj.id ?? createId('board')),
     name: String(obj.name),
+    color: String(obj.color ?? DEFAULT_BOARD_COLOR),
     nodes,
+    connections: normalizeConnections(obj.connections),
   }
 }
 
@@ -71,8 +107,14 @@ export function createBoard(name: string, id?: string): Board {
   return {
     id: id ?? createId('board'),
     name: name.trim() || 'Untitled Board',
+    color: DEFAULT_BOARD_COLOR,
     nodes: [],
+    connections: [],
   }
+}
+
+export function setBoardColor(board: Board, color: string): Board {
+  return { ...board, color: color || DEFAULT_BOARD_COLOR }
 }
 
 export function renameBoard(board: Board, name: string): Board {
@@ -91,7 +133,7 @@ export function createNode(
     parentId,
     position,
     note: '',
-    screenshot: null,
+    screenshots: [],
   }
 }
 
@@ -131,7 +173,9 @@ export function addChildNode(board: Board, parentId: string, name: string): Boar
 export function updateNode(
   board: Board,
   nodeId: string,
-  patch: Partial<Pick<SchemaNode, 'name' | 'note' | 'screenshot' | 'parentId'>>,
+  patch: Partial<
+    Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId'>
+  >,
 ): Board {
   if (patch.parentId !== undefined) {
     const invalid =
@@ -164,24 +208,80 @@ export function addNote(board: Board, nodeId: string, note: string): Board {
   return updateNode(board, nodeId, { note })
 }
 
-export function attachScreenshot(
+export function addScreenshots(
   board: Board,
   nodeId: string,
-  screenshot: string,
+  screenshots: string[],
 ): Board {
-  return updateNode(board, nodeId, { screenshot })
+  const node = board.nodes.find((n) => n.id === nodeId)
+  if (!node || screenshots.length === 0) return board
+  return updateNode(board, nodeId, {
+    screenshots: [...node.screenshots, ...screenshots],
+  })
 }
 
-export function removeScreenshot(board: Board, nodeId: string): Board {
-  return updateNode(board, nodeId, { screenshot: null })
+export function removeScreenshotAt(
+  board: Board,
+  nodeId: string,
+  index: number,
+): Board {
+  const node = board.nodes.find((n) => n.id === nodeId)
+  if (!node) return board
+  const screenshots = node.screenshots.filter((_, i) => i !== index)
+  return updateNode(board, nodeId, { screenshots })
+}
+
+export function replaceScreenshotAt(
+  board: Board,
+  nodeId: string,
+  index: number,
+  dataUrl: string,
+): Board {
+  const node = board.nodes.find((n) => n.id === nodeId)
+  if (!node) return board
+  const screenshots = [...node.screenshots]
+  if (index < 0 || index >= screenshots.length) return board
+  screenshots[index] = dataUrl
+  return updateNode(board, nodeId, { screenshots })
+}
+
+export function addConnection(
+  board: Board,
+  source: string,
+  target: string,
+): Board {
+  if (source === target) return board
+  if (!board.nodes.some((n) => n.id === source)) return board
+  if (!board.nodes.some((n) => n.id === target)) return board
+  const exists = (board.connections ?? []).some(
+    (c) => c.source === source && c.target === target,
+  )
+  if (exists) return board
+  const connection: SchemaConnection = {
+    id: createId('connection'),
+    source,
+    target,
+  }
+  return {
+    ...board,
+    connections: [...(board.connections ?? []), connection],
+  }
+}
+
+export function removeConnection(board: Board, connectionId: string): Board {
+  return {
+    ...board,
+    connections: (board.connections ?? []).filter((c) => c.id !== connectionId),
+  }
 }
 
 export function deleteNode(board: Board, nodeId: string): Board {
   const toRemove = new Set([nodeId, ...getDescendantIds(board.nodes, nodeId)])
-  return {
-    ...board,
-    nodes: board.nodes.filter((n) => !toRemove.has(n.id)),
-  }
+  const nodes = board.nodes.filter((n) => !toRemove.has(n.id))
+  const connections = (board.connections ?? []).filter(
+    (c) => !toRemove.has(c.source) && !toRemove.has(c.target),
+  )
+  return { ...board, nodes, connections }
 }
 
 export function updateBoardInList(

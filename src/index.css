@@ -22,3 +22,34 @@ body {
 .toolbar-btn {
   @apply rounded px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40;
 }
+
+.schema-handle {
+  @apply !h-2.5 !w-2.5 !border-2 !border-white !bg-slate-400 opacity-0 transition-opacity;
+}
+
+.schema-node:hover .rel-handle,
+.schema-node:focus-within .rel-handle,
+.react-flow__node.selected .rel-handle {
+  @apply opacity-100;
+}
+
+.react-flow__node.selected .rel-handle {
+  @apply !bg-indigo-500;
+}
+
+.hierarchy-handle {
+  @apply !opacity-0 !w-0 !h-0 !min-w-0 !min-h-0 !border-0;
+}
+
+.schema-node-icon {
+  @apply rounded px-1 text-sm leading-none hover:bg-slate-100;
+}
+
+.schema-node-evidence {
+  @apply inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200;
+}
+
+.react-flow__edge.relationship-edge.selected .react-flow__edge-path {
+  stroke: #4f46e5 !important;
+  stroke-width: 2.5 !important;
+}
