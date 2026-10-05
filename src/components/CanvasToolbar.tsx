@@ -1,5 +1,4 @@
 import type { ReactFlowInstance } from '@xyflow/react'
-import { BoardColorPicker } from './BoardColorPicker'
 import { ImportExportButtons } from './ImportExport'
 
 interface CanvasToolbarProps {
@@ -35,7 +34,6 @@ export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
         Fit
       </button>
       <ImportExportButtons />
-      <BoardColorPicker />
     </div>
   )
 }

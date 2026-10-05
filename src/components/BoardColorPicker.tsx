@@ -9,9 +9,9 @@ export function BoardColorPicker() {
   if (!board) return null
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-l border-slate-200 pl-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-        Board
+        Board color
       </span>
       {BOARD_COLOR_PRESETS.map((preset) => (
         <button

@@ -11,11 +11,19 @@ import {
 import * as schema from '../services/schemaService'
 import type { AppData, Board, DialogState, SchemaNode } from '../types/schema'
 
+export type EdgeMenuState = {
+  connectionId: string
+  x: number
+  y: number
+} | null
+
 interface SchemaStore extends AppData {
   hydrated: boolean
   filePersistence: boolean
   dialog: DialogState
+  edgeMenu: EdgeMenuState
   setDialog: (dialog: DialogState) => void
+  setEdgeMenu: (menu: EdgeMenuState) => void
   hydrateFromProjectFiles: () => Promise<void>
   createBoard: (name: string) => void
   renameBoard: (boardId: string, name: string) => void
@@ -84,8 +92,10 @@ export const useSchemaStore = create<SchemaStore>()(
       hydrated: false,
       filePersistence: false,
       dialog: null,
+      edgeMenu: null,
 
       setDialog: (dialog) => set({ dialog }),
+      setEdgeMenu: (edgeMenu) => set({ edgeMenu }),
 
       hydrateFromProjectFiles: async () => {
         const loaded = await loadBoardsFromFiles()

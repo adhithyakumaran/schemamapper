@@ -58,7 +58,6 @@ export type DialogState =
   | { type: 'addRoot' }
   | { type: 'edit'; nodeId: string }
   | { type: 'note'; nodeId: string }
-  | { type: 'evidence'; nodeId: string }
   | { type: 'deleteNode'; nodeId: string }
   | { type: 'nodeMenu'; nodeId: string; x: number; y: number }
   | null

@@ -30,6 +30,7 @@ export function Canvas() {
   const setDialog = useSchemaStore((s) => s.setDialog)
   const addConnection = useSchemaStore((s) => s.addConnection)
   const removeConnection = useSchemaStore((s) => s.removeConnection)
+  const setEdgeMenu = useSchemaStore((s) => s.setEdgeMenu)
 
   const [rf, setRf] = useState<ReactFlowInstance | null>(null)
 
@@ -162,7 +163,17 @@ export function Canvas() {
         isValidConnection={isValidConnection}
         onEdgeContextMenu={(e, edge) => {
           e.preventDefault()
-          if (!isHierarchyEdgeId(edge.id)) removeConnection(edge.id)
+          if (isHierarchyEdgeId(edge.id)) return
+          setEdgeMenu({
+            connectionId: edge.id,
+            x: e.clientX,
+            y: e.clientY,
+          })
+        }}
+        onEdgesDelete={(edges) => {
+          for (const edge of edges) {
+            if (!isHierarchyEdgeId(edge.id)) removeConnection(edge.id)
+          }
         }}
         onNodeDoubleClick={(_, node) =>
           setDialog({ type: 'edit', nodeId: node.id })
@@ -180,9 +191,9 @@ export function Canvas() {
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1.2}
-          color="rgba(100, 116, 139, 0.22)"
+          gap={18}
+          size={2}
+          color="rgba(71, 85, 105, 0.38)"
         />
         <Controls showInteractive={false} className="!shadow-sm" />
       </ReactFlow>

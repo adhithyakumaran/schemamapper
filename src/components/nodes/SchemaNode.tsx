@@ -26,10 +26,10 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`schema-node group relative min-w-[180px] max-w-[240px] rounded-lg border bg-white px-3 py-2.5 shadow-sm transition-shadow ${
+      className={`schema-node group relative min-w-[180px] max-w-[240px] rounded-lg border bg-white px-3 py-2.5 shadow-md transition-shadow ${
         selected
-          ? 'border-slate-700 ring-2 ring-slate-400/50 shadow-md'
-          : 'border-slate-300 hover:border-slate-400 hover:shadow'
+          ? 'border-slate-800 ring-2 ring-slate-400/60 shadow-lg'
+          : 'border-slate-400/80 hover:border-slate-500 hover:shadow-lg'
       }`}
       onContextMenu={openMenu}
     >
@@ -44,13 +44,15 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
         type="target"
         position={Position.Left}
         id="rel-target"
-        className="schema-handle rel-handle"
+        className="schema-handle rel-handle rel-handle-target"
+        title="Relationship target"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="rel-source"
-        className="schema-handle rel-handle"
+        className="schema-handle rel-handle rel-handle-source"
+        title="Drag to link relationship"
       />
 
       <div className="font-semibold text-sm text-slate-900 pr-2 break-words leading-snug">
@@ -62,11 +64,11 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
           {nodeData.hasNote && (
             <button
               type="button"
-              title="Note"
+              title="Has note — open Edit"
               className="schema-node-icon"
               onClick={(e) => {
                 e.stopPropagation()
-                setDialog({ type: 'note', nodeId: nodeData.schemaNodeId })
+                setDialog({ type: 'edit', nodeId: nodeData.schemaNodeId })
               }}
             >
               📝
@@ -75,11 +77,11 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
           {nodeData.evidenceCount > 0 && (
             <button
               type="button"
-              title="View evidence"
+              title="View evidence — open Edit"
               className="schema-node-evidence"
               onClick={(e) => {
                 e.stopPropagation()
-                setDialog({ type: 'evidence', nodeId: nodeData.schemaNodeId })
+                setDialog({ type: 'edit', nodeId: nodeData.schemaNodeId })
               }}
             >
               <span aria-hidden>📷</span>
@@ -89,8 +91,8 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
         </div>
         <button
           type="button"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 text-sm leading-none shadow-sm hover:bg-slate-50"
-          title="Add child"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-400 bg-white text-slate-800 text-sm font-medium leading-none shadow-sm hover:bg-slate-50"
+          title="Add child (hierarchy)"
           onClick={(e) => {
             e.stopPropagation()
             setDialog({ type: 'addChild', parentId: nodeData.schemaNodeId })

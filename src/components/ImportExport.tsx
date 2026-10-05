@@ -1,20 +1,7 @@
-import { useRef } from 'react'
-import { exportBoardJson as serializeBoard } from '../services/schemaService'
+import { useRef, useState } from 'react'
+import { downloadBoardJson, downloadBoardPdf, downloadBoardPng } from '../services/boardExport'
 import { useSchemaStore } from '../store/schemaStore'
 import type { Board } from '../types/schema'
-
-export function downloadBoardJson(board: Board) {
-  const blob = new Blob([serializeBoard(board)], {
-    type: 'application/json',
-  })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  const safeName = board.name.replace(/[^\w\-]+/g, '-').toLowerCase()
-  a.href = url
-  a.download = `${safeName || 'schema-board'}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 export function ImportExportButtons() {
   const board = useSchemaStore((s) =>
@@ -22,13 +9,15 @@ export function ImportExportButtons() {
   )
   const importBoard = useSchemaStore((s) => s.importBoard)
   const replaceActiveBoard = useSchemaStore((s) => s.replaceActiveBoard)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const jsonInputRef = useRef<HTMLInputElement>(null)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  const onImport = async (file: File) => {
+  const onImportJson = async (file: File) => {
     try {
       const text = await file.text()
       const parsed = JSON.parse(text) as Board
-      if (board && confirm('Replace current board with imported data?')) {
+      if (board && confirm('Replace current board with imported JSON?')) {
         replaceActiveBoard(parsed)
       } else {
         importBoard(parsed)
@@ -38,31 +27,71 @@ export function ImportExportButtons() {
     }
   }
 
+  const runExport = async (kind: 'json' | 'pdf' | 'png') => {
+    if (!board) return
+    setExporting(true)
+    setExportOpen(false)
+    try {
+      if (kind === 'json') downloadBoardJson(board)
+      else if (kind === 'pdf') await downloadBoardPdf(board)
+      else await downloadBoardPng(board)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <>
+      <div className="relative">
+        <button
+          type="button"
+          className="toolbar-btn"
+          disabled={!board || exporting}
+          onClick={() => setExportOpen((o) => !o)}
+        >
+          Export ▾
+        </button>
+        {exportOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+            <button
+              type="button"
+              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              onClick={() => runExport('json')}
+            >
+              JSON
+            </button>
+            <button
+              type="button"
+              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              onClick={() => runExport('pdf')}
+            >
+              PDF
+            </button>
+            <button
+              type="button"
+              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              onClick={() => runExport('png')}
+            >
+              PNG
+            </button>
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className="toolbar-btn"
-        disabled={!board}
-        onClick={() => board && downloadBoardJson(board)}
+        onClick={() => jsonInputRef.current?.click()}
       >
-        Export
-      </button>
-      <button
-        type="button"
-        className="toolbar-btn"
-        onClick={() => inputRef.current?.click()}
-      >
-        Import
+        Import JSON
       </button>
       <input
-        ref={inputRef}
+        ref={jsonInputRef}
         type="file"
         accept="application/json,.json"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
-          if (file) onImport(file)
+          if (file) onImportJson(file)
           e.target.value = ''
         }}
       />

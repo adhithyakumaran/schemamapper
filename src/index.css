@@ -24,7 +24,19 @@ body {
 }
 
 .schema-handle {
-  @apply !h-2.5 !w-2.5 !border-2 !border-white !bg-slate-400 opacity-0 transition-opacity;
+  @apply !h-3 !w-3 !border-2 !border-white transition-opacity;
+}
+
+.rel-handle {
+  @apply !bg-indigo-400 opacity-0;
+}
+
+.rel-handle-source {
+  @apply !-right-1;
+}
+
+.rel-handle-target {
+  @apply !-left-1 !bg-violet-400;
 }
 
 .schema-node:hover .rel-handle,
@@ -33,8 +45,19 @@ body {
   @apply opacity-100;
 }
 
-.react-flow__node.selected .rel-handle {
-  @apply !bg-indigo-500;
+.react-flow__node.selected .rel-handle-source {
+  @apply !bg-indigo-600;
+}
+
+.react-flow__edge.hierarchy-edge .react-flow__edge-path {
+  stroke: #64748b !important;
+  stroke-width: 1.5px !important;
+}
+
+.react-flow__edge.relationship-edge .react-flow__edge-path {
+  stroke: #4f46e5 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: 8 5 !important;
 }
 
 .hierarchy-handle {

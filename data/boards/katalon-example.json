@@ -33,7 +33,7 @@
         "x": 7340,
         "y": 320
       },
-      "note": "",
+      "note": "Katalon Studio 11.5 File menu. Attach File menu screenshot evidence via Edit Node when captures are available.",
       "screenshots": []
     },
     {
@@ -44,7 +44,7 @@
         "x": 8770,
         "y": 460
       },
-      "note": "",
+      "note": "File > New submenu. Attach New submenu screenshot evidence via Edit Node when captures are available.",
       "screenshots": []
     },
     {
@@ -209,7 +209,7 @@
         "x": 11190,
         "y": 460
       },
-      "note": "",
+      "note": "File > New Sample Project submenu. Attach submenu screenshot evidence via Edit Node when captures are available.",
       "screenshots": []
     },
     {
@@ -319,7 +319,7 @@
         "x": 12400,
         "y": 460
       },
-      "note": "Observed disabled in captured screenshot.",
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
       "screenshots": []
     },
     {
@@ -341,7 +341,7 @@
         "x": 12840,
         "y": 460
       },
-      "note": "Observed disabled in captured screenshot.",
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
       "screenshots": []
     },
     {
@@ -352,7 +352,7 @@
         "x": 13060,
         "y": 460
       },
-      "note": "Observed disabled in captured screenshot.",
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
       "screenshots": []
     },
     {
@@ -407,7 +407,7 @@
         "x": 13940,
         "y": 460
       },
-      "note": "Observed as a project/recent-project entry in the captured File menu. Visible path: C:\\Users\\adhit\\Katalon Studio\\recorder",
+      "note": "Observed near the bottom of the File menu. Captured path shown as C:\\Users\\adhit\\Katalon Studio\\recorder.",
       "screenshots": []
     },
     {
