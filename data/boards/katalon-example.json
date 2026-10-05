@@ -1,0 +1,149 @@
+{
+  "id": "board-katalon-example",
+  "name": "Katalon Example",
+  "nodes": [
+    {
+      "id": "node-katalon-studio",
+      "name": "Katalon Studio",
+      "parentId": null,
+      "position": {
+        "x": 80,
+        "y": 40
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-menu-bar",
+      "name": "Menu Bar",
+      "parentId": "node-katalon-studio",
+      "position": {
+        "x": 850,
+        "y": 180
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-file",
+      "name": "File",
+      "parentId": "node-menu-bar",
+      "position": {
+        "x": 1180,
+        "y": 320
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-new",
+      "name": "New",
+      "parentId": "node-file",
+      "position": {
+        "x": 1400,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-project",
+      "name": "Project",
+      "parentId": "node-new",
+      "position": {
+        "x": 1400,
+        "y": 600
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-folder",
+      "name": "Folder",
+      "parentId": "node-new",
+      "position": {
+        "x": 1620,
+        "y": 600
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-test-case",
+      "name": "Test Case",
+      "parentId": "node-new",
+      "position": {
+        "x": 1840,
+        "y": 600
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-open-project",
+      "name": "Open Project",
+      "parentId": "node-file",
+      "position": {
+        "x": 1840,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-action",
+      "name": "Action",
+      "parentId": "node-menu-bar",
+      "position": {
+        "x": 2060,
+        "y": 320
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-spy",
+      "name": "Spy",
+      "parentId": "node-action",
+      "position": {
+        "x": 2060,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-record",
+      "name": "Record",
+      "parentId": "node-action",
+      "position": {
+        "x": 2280,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-run",
+      "name": "Run",
+      "parentId": "node-action",
+      "position": {
+        "x": 2500,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    },
+    {
+      "id": "node-debug",
+      "name": "Debug",
+      "parentId": "node-action",
+      "position": {
+        "x": 2720,
+        "y": 460
+      },
+      "note": "",
+      "screenshot": null
+    }
+  ]
+}

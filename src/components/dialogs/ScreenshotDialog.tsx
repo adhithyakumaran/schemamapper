@@ -17,13 +17,13 @@ function ScreenshotDialogInner({ node }: { node: SchemaNode }) {
   const updateNode = useSchemaStore((s) => s.updateNode)
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
-  const current = preview ?? node.image
+  const current = preview ?? node.screenshot
 
   const onFile = async (file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return
     const dataUrl = await readFileAsDataUrl(file)
     setPreview(dataUrl)
-    updateNode(node.id, { image: dataUrl })
+    updateNode(node.id, { screenshot: dataUrl })
   }
 
   return (
@@ -59,7 +59,7 @@ function ScreenshotDialogInner({ node }: { node: SchemaNode }) {
               className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
               onClick={() => {
                 setPreview(null)
-                updateNode(node.id, { image: null })
+                updateNode(node.id, { screenshot: null })
               }}
             >
               Remove

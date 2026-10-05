@@ -1,14 +1,10 @@
 import { useRef } from 'react'
-import { syncEdgesFromParents } from '../lib/tree'
+import { exportBoardJson as serializeBoard } from '../services/schemaService'
 import { useSchemaStore } from '../store/schemaStore'
 import type { Board } from '../types/schema'
 
-export function exportBoardJson(board: Board) {
-  const payload = {
-    ...board,
-    edges: syncEdgesFromParents(board.nodes),
-  }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+export function downloadBoardJson(board: Board) {
+  const blob = new Blob([serializeBoard(board)], {
     type: 'application/json',
   })
   const url = URL.createObjectURL(blob)
@@ -29,22 +25,16 @@ export function ImportExportButtons() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const onImport = async (file: File) => {
-    const text = await file.text()
-    const parsed = JSON.parse(text) as Board
-    if (!parsed.name || !Array.isArray(parsed.nodes)) {
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text) as Board
+      if (board && confirm('Replace current board with imported data?')) {
+        replaceActiveBoard(parsed)
+      } else {
+        importBoard(parsed)
+      }
+    } catch {
       alert('Invalid board JSON')
-      return
-    }
-    const normalized: Board = {
-      id: parsed.id,
-      name: parsed.name,
-      nodes: parsed.nodes,
-      edges: parsed.edges ?? [],
-    }
-    if (board && confirm('Replace current board with imported data?')) {
-      replaceActiveBoard(normalized)
-    } else {
-      importBoard(normalized)
     }
   }
 
@@ -54,7 +44,7 @@ export function ImportExportButtons() {
         type="button"
         className="toolbar-btn"
         disabled={!board}
-        onClick={() => board && exportBoardJson(board)}
+        onClick={() => board && downloadBoardJson(board)}
       >
         Export
       </button>

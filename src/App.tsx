@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BoardSidebar } from './components/BoardSidebar'
 import { Canvas } from './components/Canvas'
 import { NodeMenu } from './components/NodeMenu'
@@ -27,6 +28,26 @@ function AppHeader() {
 }
 
 export default function App() {
+  const hydrate = useSchemaStore((s) => s.hydrateFromProjectFiles)
+  const hydrated = useSchemaStore((s) => s.hydrated)
+
+  useEffect(() => {
+    const run = () => void hydrate()
+    if (useSchemaStore.persist.hasHydrated()) {
+      run()
+    } else {
+      useSchemaStore.persist.onFinishHydration(run)
+    }
+  }, [hydrate])
+
+  if (!hydrated) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+        Loading schema…
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col">
       <AppHeader />

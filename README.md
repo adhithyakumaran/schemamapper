@@ -1,20 +1,46 @@
 # Schema Mapper
 
-A lightweight internal whiteboard for mapping hierarchical UI/application structure (for example, menus and panels in tools like Katalon Studio).
+A lightweight internal whiteboard for mapping hierarchical UI/application structure.
 
-## Features
+**The schema is the source of truth.** The canvas only renders structured data (`nodes` with `parentId` relationships).
 
-- Multiple independent boards (create, rename, delete, open)
-- Canvas with pan, zoom, fit, movable nodes, and parent→child connectors
-- Structured node data (`parentId`, positions, notes, optional screenshot attachments)
-- Browser persistence via `localStorage`
-- JSON import / export per board
+## Schema files (Cursor-friendly)
 
-## Tech stack
+Boards live as human-readable JSON under:
 
-- React + TypeScript + Vite
-- [@xyflow/react](https://reactflow.dev/) for the canvas
-- Zustand for centralized schema state
+```
+data/boards/
+├── _registry.json          # board id → filename mapping
+├── katalon-example.json    # sample Katalon menu tree
+└── …                       # one file per board
+```
+
+Example node:
+
+```json
+{
+  "id": "node-file",
+  "name": "File",
+  "parentId": "node-menu-bar",
+  "position": { "x": 100, "y": 200 },
+  "note": "",
+  "screenshot": null
+}
+```
+
+You can edit these files directly in the repo; restart dev or refresh after changes. While `npm run dev` is running, UI edits are also written back to `data/boards/` via the dev API.
+
+## Architecture
+
+```
+data/boards/*.json  →  schemaService  →  Zustand store  →  React Flow canvas
+```
+
+- `src/services/schemaService.ts` — all board/node mutations (create, add child, move, notes, screenshots, import/export)
+- `src/services/persistence.ts` — load/save boards from `data/boards` (dev server)
+- `src/store/schemaStore.ts` — thin UI state + debounced file sync
+
+Hierarchy is **only** from `parentId`. Connectors on the canvas are derived at render time.
 
 ## Run locally
 
@@ -23,17 +49,16 @@ npm install
 npm run dev
 ```
 
-Open the URL shown in the terminal (default port `43123`).
+Open http://127.0.0.1:43123
 
 ## Build
 
 ```bash
 npm run build
-npm run preview
 ```
 
-## Data model
+Static builds copy `data/boards/` into `dist/data/boards/` for read-only reference. Use Export/Import or the dev server for round-tripping edits.
 
-Each board stores `nodes` and derived `edges`. Nodes include `id`, `name`, `parentId`, `position`, `note`, and `image` (base64 data URL when a screenshot is attached).
+## Tech
 
-Export produces a single JSON file suitable for tooling or later automation.
+React, TypeScript, Vite, @xyflow/react, Zustand

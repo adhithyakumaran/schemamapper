@@ -1,27 +1,26 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createKatalonExampleBoard } from '../data/sampleBoard'
-import { createId } from '../lib/ids'
+import { countDescendants } from '../lib/tree'
 import {
-  countDescendants,
-  getDescendantIds,
-  syncEdgesFromParents,
-} from '../lib/tree'
-import type {
-  AppData,
-  Board,
-  DialogState,
-  SchemaNode,
-} from '../types/schema'
+  createBoardFile,
+  deleteBoardFile,
+  loadBoardsFromFiles,
+  saveBoardToFile,
+} from '../services/persistence'
+import * as schema from '../services/schemaService'
+import type { AppData, Board, DialogState, SchemaNode } from '../types/schema'
 
 interface SchemaStore extends AppData {
+  hydrated: boolean
+  filePersistence: boolean
   dialog: DialogState
   setDialog: (dialog: DialogState) => void
+  hydrateFromProjectFiles: () => Promise<void>
   createBoard: (name: string) => void
   renameBoard: (boardId: string, name: string) => void
   deleteBoard: (boardId: string) => void
   setActiveBoard: (boardId: string) => void
-  getActiveBoard: () => Board | null
   addNode: (
     name: string,
     parentId: string | null,
@@ -29,7 +28,9 @@ interface SchemaStore extends AppData {
   ) => void
   updateNode: (
     nodeId: string,
-    patch: Partial<Pick<SchemaNode, 'name' | 'note' | 'image' | 'parentId'>>,
+    patch: Partial<
+      Pick<SchemaNode, 'name' | 'note' | 'screenshot' | 'parentId'>
+    >,
   ) => void
   updateNodePosition: (nodeId: string, x: number, y: number) => void
   deleteNode: (nodeId: string) => void
@@ -37,195 +38,207 @@ interface SchemaStore extends AppData {
   replaceActiveBoard: (board: Board) => void
 }
 
-function withSyncedEdges(board: Board): Board {
-  return {
-    ...board,
-    edges: syncEdgesFromParents(board.nodes),
-  }
-}
-
-function updateBoard(
-  boards: Board[],
-  boardId: string,
-  updater: (board: Board) => Board,
-): Board[] {
-  return boards.map((b) => (b.id === boardId ? updater(b) : b))
-}
-
 const sample = createKatalonExampleBoard()
+const sampleFile = 'katalon-example.json'
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+function schedulePersistBoard(
+  board: Board,
+  file: string | undefined,
+  filePersistence: boolean,
+) {
+  if (!filePersistence || !file) return
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    void saveBoardToFile(board, file)
+  }, 400)
+}
+
+function uniqueFilename(
+  name: string,
+  boardFiles: Record<string, string>,
+): string {
+  let base = schema.slugifyBoardName(name)
+  let file = `${base}.json`
+  let i = 2
+  const used = new Set(Object.values(boardFiles))
+  while (used.has(file)) {
+    file = `${base}-${i}.json`
+    i += 1
+  }
+  return file
+}
 
 export const useSchemaStore = create<SchemaStore>()(
   persist(
     (set, get) => ({
       boards: [sample],
       activeBoardId: sample.id,
+      boardFiles: { [sample.id]: sampleFile },
+      hydrated: false,
+      filePersistence: false,
       dialog: null,
 
       setDialog: (dialog) => set({ dialog }),
 
-      createBoard: (name) => {
-        const board: Board = {
-          id: createId('board'),
-          name: name.trim() || 'Untitled Board',
-          nodes: [],
-          edges: [],
+      hydrateFromProjectFiles: async () => {
+        const loaded = await loadBoardsFromFiles()
+        if (loaded && loaded.boards.length > 0) {
+          set({
+            boards: loaded.boards,
+            boardFiles: loaded.boardFiles,
+            activeBoardId:
+              get().activeBoardId &&
+              loaded.boards.some((b) => b.id === get().activeBoardId)
+                ? get().activeBoardId
+                : loaded.boards[0].id,
+            hydrated: true,
+            filePersistence: true,
+          })
+          return
         }
+        set({ hydrated: true, filePersistence: false })
+      },
+
+      createBoard: (name) => {
+        const board = schema.createBoard(name)
+        const file = uniqueFilename(board.name, get().boardFiles)
         set((state) => ({
           boards: [...state.boards, board],
           activeBoardId: board.id,
+          boardFiles: { ...state.boardFiles, [board.id]: file },
         }))
+        if (get().filePersistence) {
+          void createBoardFile(board, file)
+        }
       },
 
       renameBoard: (boardId, name) => {
         set((state) => ({
-          boards: updateBoard(state.boards, boardId, (b) => ({
-            ...b,
-            name: name.trim() || b.name,
-          })),
+          boards: schema.updateBoardInList(state.boards, boardId, (b) =>
+            schema.renameBoard(b, name),
+          ),
         }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === boardId)
+        if (board) schedulePersistBoard(board, boardFiles[boardId], filePersistence)
       },
 
       deleteBoard: (boardId) => {
+        const file = get().boardFiles[boardId]
+        const filePersistence = get().filePersistence
         set((state) => {
           const boards = state.boards.filter((b) => b.id !== boardId)
+          const { [boardId]: _, ...boardFiles } = state.boardFiles
           let activeBoardId = state.activeBoardId
           if (activeBoardId === boardId) {
             activeBoardId = boards[0]?.id ?? null
           }
-          return { boards, activeBoardId }
+          return { boards, activeBoardId, boardFiles }
         })
+        if (filePersistence && file) void deleteBoardFile(file)
       },
 
       setActiveBoard: (boardId) => set({ activeBoardId: boardId }),
 
-      getActiveBoard: () => {
-        const { boards, activeBoardId } = get()
-        if (!activeBoardId) return null
-        return boards.find((b) => b.id === activeBoardId) ?? null
-      },
-
       addNode: (name, parentId, position) => {
         const { activeBoardId } = get()
         if (!activeBoardId) return
-
-        const trimmed = name.trim()
-        if (!trimmed) return
-
         set((state) => ({
-          boards: updateBoard(state.boards, activeBoardId, (board) => {
-            let x = 120
-            let y = 120
-            if (parentId) {
-              const parent = board.nodes.find((n) => n.id === parentId)
-              if (parent) {
-                const siblings = board.nodes.filter(
-                  (n) => n.parentId === parentId,
-                )
-                x = parent.position.x + siblings.length * 40
-                y = parent.position.y + 140
-              }
-            } else if (position) {
-              x = position.x
-              y = position.y
-            }
-
-            const newNode: SchemaNode = {
-              id: createId('node'),
-              name: trimmed,
-              parentId,
-              position: { x, y },
-              note: '',
-              image: null,
-            }
-
-            const nodes = [...board.nodes, newNode]
-            return withSyncedEdges({ ...board, nodes })
-          }),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.addNode(b, name, parentId, position),
+          ),
         }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
 
       updateNode: (nodeId, patch) => {
         const { activeBoardId } = get()
         if (!activeBoardId) return
         set((state) => ({
-          boards: updateBoard(state.boards, activeBoardId, (board) => {
-            if (patch.parentId !== undefined) {
-              const invalid =
-                patch.parentId === nodeId ||
-                (patch.parentId !== null &&
-                  getDescendantIds(board.nodes, nodeId).includes(
-                    patch.parentId,
-                  ))
-              if (invalid) return board
-            }
-            const nodes = board.nodes.map((n) =>
-              n.id === nodeId ? { ...n, ...patch } : n,
-            )
-            const next = { ...board, nodes }
-            return patch.parentId !== undefined
-              ? withSyncedEdges(next)
-              : next
-          }),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.updateNode(b, nodeId, patch),
+          ),
         }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
 
       updateNodePosition: (nodeId, x, y) => {
         const { activeBoardId } = get()
         if (!activeBoardId) return
         set((state) => ({
-          boards: updateBoard(state.boards, activeBoardId, (board) => ({
-            ...board,
-            nodes: board.nodes.map((n) =>
-              n.id === nodeId ? { ...n, position: { x, y } } : n,
-            ),
-          })),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.moveNode(b, nodeId, x, y),
+          ),
         }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
 
       deleteNode: (nodeId) => {
         const { activeBoardId } = get()
         if (!activeBoardId) return
         set((state) => ({
-          boards: updateBoard(state.boards, activeBoardId, (board) => {
-            const toRemove = new Set([nodeId, ...getDescendantIds(board.nodes, nodeId)])
-            const nodes = board.nodes.filter((n) => !toRemove.has(n.id))
-            return withSyncedEdges({ ...board, nodes })
-          }),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.deleteNode(b, nodeId),
+          ),
         }))
+        const { boards, boardFiles, filePersistence } = get()
+        const board = boards.find((b) => b.id === activeBoardId)
+        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
 
-      importBoard: (board) => {
-        const normalized = withSyncedEdges({
-          ...board,
-          id: board.id || createId('board'),
-        })
+      importBoard: (rawBoard) => {
+        const board = schema.normalizeImportedBoard(rawBoard)
+        const file = uniqueFilename(board.name, get().boardFiles)
         set((state) => ({
-          boards: [...state.boards, normalized],
-          activeBoardId: normalized.id,
+          boards: [...state.boards, board],
+          activeBoardId: board.id,
+          boardFiles: { ...state.boardFiles, [board.id]: file },
         }))
+        if (get().filePersistence) void createBoardFile(board, file)
       },
 
-      replaceActiveBoard: (board) => {
+      replaceActiveBoard: (rawBoard) => {
+        const normalized = schema.normalizeImportedBoard(rawBoard)
         const { activeBoardId } = get()
         if (!activeBoardId) {
-          get().importBoard(board)
+          get().importBoard(normalized)
           return
         }
-        const normalized = withSyncedEdges(board)
+        const board = { ...normalized, id: activeBoardId }
         set((state) => ({
-          boards: updateBoard(state.boards, activeBoardId, () => ({
-            ...normalized,
-            id: activeBoardId,
-          })),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, () => board),
         }))
+        const { boardFiles, filePersistence } = get()
+        schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
       },
     }),
     {
-      name: 'schema-mapper-v1',
+      name: 'schema-mapper-v2',
       partialize: (state) => ({
         boards: state.boards,
         activeBoardId: state.activeBoardId,
+        boardFiles: state.boardFiles,
       }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AppData> | undefined
+        return {
+          ...current,
+          ...p,
+          boards: (p?.boards?.length ? p.boards : current.boards).map((b) =>
+            schema.normalizeImportedBoard(b),
+          ),
+          boardFiles: p?.boardFiles ?? current.boardFiles,
+          hydrated: false,
+        }
+      },
     },
   ),
 )

@@ -1,37 +1,38 @@
-import { createId } from '../lib/ids'
-import { layoutSubtree, syncEdgesFromParents } from '../lib/tree'
+import { layoutSubtree } from '../lib/tree'
 import type { Board, SchemaNode } from '../types/schema'
 
+const BOARD_ID = 'board-katalon-example'
+
 function node(
+  id: string,
   name: string,
   parentId: string | null,
-  id?: string,
 ): SchemaNode {
   return {
-    id: id ?? createId('node'),
+    id,
     name,
     parentId,
     position: { x: 0, y: 0 },
     note: '',
-    image: null,
+    screenshot: null,
   }
 }
 
+/** Seed data mirrored in data/boards/katalon-example.json for Cursor editing. */
 export function createKatalonExampleBoard(): Board {
-  const boardId = createId('board')
-  const root = node('Katalon Studio', null, createId('node'))
-  const menuBar = node('Menu Bar', root.id)
-  const file = node('File', menuBar.id)
-  const newNode = node('New', file.id)
-  const project = node('Project', newNode.id)
-  const folder = node('Folder', newNode.id)
-  const testCase = node('Test Case', newNode.id)
-  const openProject = node('Open Project', file.id)
-  const action = node('Action', menuBar.id)
-  const spy = node('Spy', action.id)
-  const record = node('Record', action.id)
-  const run = node('Run', action.id)
-  const debug = node('Debug', action.id)
+  const root = node('node-katalon-studio', 'Katalon Studio', null)
+  const menuBar = node('node-menu-bar', 'Menu Bar', root.id)
+  const file = node('node-file', 'File', menuBar.id)
+  const newNode = node('node-new', 'New', file.id)
+  const project = node('node-project', 'Project', newNode.id)
+  const folder = node('node-folder', 'Folder', newNode.id)
+  const testCase = node('node-test-case', 'Test Case', newNode.id)
+  const openProject = node('node-open-project', 'Open Project', file.id)
+  const action = node('node-action', 'Action', menuBar.id)
+  const spy = node('node-spy', 'Spy', action.id)
+  const record = node('node-record', 'Record', action.id)
+  const run = node('node-run', 'Run', action.id)
+  const debug = node('node-debug', 'Debug', action.id)
 
   let nodes: SchemaNode[] = [
     root,
@@ -52,9 +53,8 @@ export function createKatalonExampleBoard(): Board {
   nodes = layoutSubtree(nodes, root.id, 80, 40)
 
   return {
-    id: boardId,
+    id: BOARD_ID,
     name: 'Katalon Example',
     nodes,
-    edges: syncEdgesFromParents(nodes),
   }
 }

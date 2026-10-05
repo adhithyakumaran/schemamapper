@@ -3,31 +3,35 @@ export interface NodePosition {
   y: number
 }
 
+/** Canonical node shape stored in JSON and edited by tooling (e.g. Cursor). */
 export interface SchemaNode {
   id: string
   name: string
   parentId: string | null
   position: NodePosition
   note: string
-  image: string | null
+  screenshot: string | null
 }
 
-export interface SchemaEdge {
-  id: string
-  source: string
-  target: string
-}
-
-export interface Board {
+/** Board document — hierarchy lives in nodes[].parentId; no edges on disk. */
+export interface BoardDocument {
   id: string
   name: string
   nodes: SchemaNode[]
-  edges: SchemaEdge[]
+}
+
+/** Runtime board (same as document; edges are derived only for rendering). */
+export type Board = BoardDocument
+
+export interface BoardRegistry {
+  entries: { boardId: string; file: string }[]
 }
 
 export interface AppData {
   boards: Board[]
   activeBoardId: string | null
+  /** Maps board id → filename under data/boards/ */
+  boardFiles: Record<string, string>
 }
 
 export type DialogState =

@@ -38,7 +38,7 @@ export function Canvas() {
         label: n.name,
         schemaNodeId: n.id,
         hasNote: Boolean(n.note?.trim()),
-        hasImage: Boolean(n.image),
+        hasImage: Boolean(n.screenshot),
       } satisfies SchemaNodeData,
     }))
   }, [board])
