@@ -170,9 +170,12 @@ export function Canvas() {
         fitView
         minZoom={0.2}
         maxZoom={2}
-        nodesDeletable={false}
         edgesFocusable
         deleteKeyCode={['Backspace', 'Delete']}
+        onBeforeDelete={async ({ nodes, edges }) => {
+          if (nodes.length > 0) return false
+          return edges.every((e) => !isHierarchyEdgeId(e.id))
+        }}
         proOptions={{ hideAttribution: true }}
       >
         <Background
