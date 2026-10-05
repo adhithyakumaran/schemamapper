@@ -1,5 +1,6 @@
 import { createId } from '../lib/ids'
 import { getDescendantIds } from '../lib/tree'
+import { DEFAULT_BOARD_LAYOUT, type BoardLayoutType } from '../types/layout'
 import {
   DEFAULT_BOARD_COLOR,
   type Board,
@@ -63,6 +64,10 @@ export function boardToDocument(board: Board): BoardDocument {
     id: board.id,
     name: board.name,
     color: board.color ?? DEFAULT_BOARD_COLOR,
+    layout: board.layout ?? DEFAULT_BOARD_LAYOUT,
+    ...(board.freeformPositions
+      ? { freeformPositions: { ...board.freeformPositions } }
+      : {}),
     nodes: board.nodes.map((n) => ({
       id: n.id,
       name: n.name,
@@ -94,10 +99,30 @@ export function normalizeImportedBoard(raw: unknown): Board {
 
   const nodes = (obj.nodes as Record<string, unknown>[]).map(normalizeNode)
 
+  const layoutRaw = obj.layout
+  const layout =
+    typeof layoutRaw === 'string' ? layoutRaw : DEFAULT_BOARD_LAYOUT
+
+  let freeformPositions: Record<string, { x: number; y: number }> | undefined
+  if (obj.freeformPositions && typeof obj.freeformPositions === 'object') {
+    freeformPositions = {}
+    for (const [key, val] of Object.entries(
+      obj.freeformPositions as Record<string, unknown>,
+    )) {
+      const pos = val as { x?: number; y?: number }
+      freeformPositions[key] = {
+        x: Number(pos.x ?? 0),
+        y: Number(pos.y ?? 0),
+      }
+    }
+  }
+
   return {
     id: String(obj.id ?? createId('board')),
     name: String(obj.name),
     color: String(obj.color ?? DEFAULT_BOARD_COLOR),
+    layout: layout as BoardLayoutType,
+    freeformPositions,
     nodes,
     connections: normalizeConnections(obj.connections),
   }
@@ -108,9 +133,27 @@ export function createBoard(name: string, id?: string): Board {
     id: id ?? createId('board'),
     name: name.trim() || 'Untitled Board',
     color: DEFAULT_BOARD_COLOR,
+    layout: DEFAULT_BOARD_LAYOUT,
     nodes: [],
     connections: [],
   }
+}
+
+export function snapshotFreeformPositions(board: Board): Board {
+  const freeformPositions: Record<string, { x: number; y: number }> = {}
+  for (const node of board.nodes) {
+    freeformPositions[node.id] = { ...node.position }
+  }
+  return { ...board, freeformPositions }
+}
+
+export function restoreFreeformPositions(board: Board): Board {
+  if (!board.freeformPositions) return board
+  const nodes = board.nodes.map((n) => ({
+    ...n,
+    position: board.freeformPositions![n.id] ?? n.position,
+  }))
+  return { ...board, nodes }
 }
 
 export function setBoardColor(board: Board, color: string): Board {

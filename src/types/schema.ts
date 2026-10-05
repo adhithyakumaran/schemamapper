@@ -1,3 +1,10 @@
+import type { BoardLayoutType } from './layout'
+import type {
+  WorkspaceDocument,
+  WorkspaceSelection,
+  WorkspaceTreeNode,
+} from './workspace'
+
 export interface NodePosition {
   x: number
   y: number
@@ -38,6 +45,10 @@ export interface BoardDocument {
   color: string
   nodes: SchemaNode[]
   connections: SchemaConnection[]
+  /** Visualization preference (optional in imported JSON). */
+  layout?: BoardLayoutType
+  /** Saved manual positions when using freeform layout. */
+  freeformPositions?: Record<string, NodePosition>
 }
 
 export type Board = BoardDocument
@@ -50,9 +61,14 @@ export interface AppData {
   boards: Board[]
   activeBoardId: string | null
   boardFiles: Record<string, string>
+  workspaceTree: WorkspaceTreeNode[]
+  workspaceDocuments: Record<string, WorkspaceDocument>
+  selection: WorkspaceSelection
 }
 
 export type DialogState =
+  | { type: 'newWorkspace' }
+  | { type: 'folder'; mode: 'create' | 'rename'; folderId?: string }
   | { type: 'board'; mode: 'create' | 'rename'; boardId?: string }
   | { type: 'addChild'; parentId: string }
   | { type: 'addRoot' }

@@ -152,6 +152,19 @@ export function schemaApiPlugin(): Plugin {
           }
         }
       }
+      const modulesDir = path.resolve(process.cwd(), 'data/katalon-modules')
+      if (fs.existsSync(modulesDir)) {
+        const outModules = path.resolve(process.cwd(), 'dist/data/katalon-modules')
+        fs.mkdirSync(outModules, { recursive: true })
+        for (const name of fs.readdirSync(modulesDir)) {
+          if (name.endsWith('.json')) {
+            fs.copyFileSync(
+              path.join(modulesDir, name),
+              path.join(outModules, name),
+            )
+          }
+        }
+      }
     },
   }
 }

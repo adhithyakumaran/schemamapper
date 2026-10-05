@@ -1,8 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { autoLayoutBoard, boardNeedsAutoLayout } from '../lib/autoLayout'
+import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
+import { createId } from '../lib/ids'
 import { countDescendants } from '../lib/tree'
-import { loadBoardsFromServer, type PersistenceMode } from '../services/boardLoader'
+import {
+  collectBoardIds,
+  createBoardRefNode,
+  createDocumentRefNode,
+  createFolderNode,
+  insertNode,
+  moveNodeInTree,
+  removeNode,
+  renameNode,
+  toggleFolderCollapsed,
+} from '../lib/workspaceTree'
+import {
+  loadBoardsFromServer,
+  loadSeedBoards,
+  type PersistenceMode,
+} from '../services/boardLoader'
 import {
   createBoardFile,
   deleteBoardFile,
@@ -14,8 +30,18 @@ import {
   syncNodeScreenshots,
   upsertFullBoardToSupabase,
 } from '../services/supabaseBoardService'
-import type { AppData, Board, DialogState, SchemaNode } from '../types/schema'
-import { createKatalonExampleBoard } from '../data/sampleBoard'
+import { DEFAULT_BOARD_LAYOUT, type BoardLayoutType } from '../types/layout'
+import type {
+  AppData,
+  Board,
+  DialogState,
+  SchemaNode,
+} from '../types/schema'
+import type {
+  WorkspaceDocument,
+  WorkspaceSelection,
+  WorkspaceTreeNode,
+} from '../types/workspace'
 
 export type EdgeMenuState = {
   connectionId: string
@@ -35,12 +61,23 @@ interface SchemaStore extends AppData {
   edgeMenu: EdgeMenuState
   setDialog: (dialog: DialogState) => void
   setEdgeMenu: (menu: EdgeMenuState) => void
+  setSelection: (selection: WorkspaceSelection) => void
   hydrateFromServer: () => Promise<void>
   reloadFromServer: () => Promise<void>
-  autoLayoutActiveBoard: () => void
+  applyActiveBoardLayout: () => void
+  setBoardLayout: (boardId: string, layout: BoardLayoutType) => void
   createBoard: (name: string) => void
+  createFolder: (name: string, parentFolderId?: string | null) => void
   renameBoard: (boardId: string, name: string) => void
+  renameWorkspaceItem: (itemId: string, name: string) => void
   deleteBoard: (boardId: string) => void
+  deleteWorkspaceItem: (itemId: string) => void
+  toggleWorkspaceFolder: (folderId: string) => void
+  moveWorkspaceItem: (
+    itemId: string,
+    targetParentId: string | null,
+    targetIndex: number,
+  ) => void
   setActiveBoard: (boardId: string) => void
   addNode: (
     name: string,
@@ -61,10 +98,11 @@ interface SchemaStore extends AppData {
   setBoardColor: (boardId: string, color: string) => void
   deleteNode: (nodeId: string) => void
   importBoard: (board: Board) => void
+  importMarkdownFile: (file: File) => Promise<void>
+  importPdfFile: (file: File) => Promise<void>
+  updateMarkdownDocument: (documentId: string, content: string) => void
   replaceActiveBoard: (board: Board) => void
 }
-
-const fallbackSample = createKatalonExampleBoard()
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -81,6 +119,39 @@ function uniqueFilename(
     i += 1
   }
   return file
+}
+
+function ensureWorkspaceTree(
+  boards: Board[],
+  tree: WorkspaceTreeNode[],
+): WorkspaceTreeNode[] {
+  const refs = new Set(collectBoardIds(tree))
+  let next = tree.length > 0 ? tree : []
+  for (const board of boards) {
+    if (!refs.has(board.id)) {
+      next = insertNode(next, null, createBoardRefNode(board.id, board.name))
+    }
+  }
+  return next
+}
+
+function selectionBoardId(selection: WorkspaceSelection): string | null {
+  return selection?.kind === 'board' ? selection.boardId : null
+}
+
+function applyLayout(board: Board, layout: BoardLayoutType): Board {
+  if (layout === 'freeform') return schema.restoreFreeformPositions(board)
+  return layoutBoard(board, layout)
+}
+
+function transitionLayout(board: Board, next: BoardLayoutType): Board {
+  const current = board.layout ?? DEFAULT_BOARD_LAYOUT
+  let b = board
+  if (current === 'freeform' && next !== 'freeform') {
+    b = schema.snapshotFreeformPositions(b)
+  }
+  b = { ...b, layout: next }
+  return applyLayout(b, next)
 }
 
 function schedulePersist(
@@ -122,14 +193,31 @@ function schedulePersist(
   }
 }
 
+function registerBoardInWorkspace(
+  tree: WorkspaceTreeNode[],
+  board: Board,
+  parentFolderId?: string | null,
+): WorkspaceTreeNode[] {
+  const refs = collectBoardIds(tree)
+  if (refs.includes(board.id)) return tree
+  return insertNode(
+    tree,
+    parentFolderId ?? null,
+    createBoardRefNode(board.id, board.name),
+  )
+}
+
 export const useSchemaStore = create<SchemaStore>()(
   persist(
     (set, get) => ({
       boards: [],
       activeBoardId: null,
       boardFiles: {},
+      workspaceTree: [],
+      workspaceDocuments: {},
+      selection: null,
       hydrated: false,
-      persistenceMode: 'offline',
+      persistenceMode: 'local',
       syncStatus: 'idle',
       syncError: null,
       layoutFitTick: 0,
@@ -139,62 +227,90 @@ export const useSchemaStore = create<SchemaStore>()(
       setDialog: (dialog) => set({ dialog }),
       setEdgeMenu: (edgeMenu) => set({ edgeMenu }),
 
+      setSelection: (selection) =>
+        set({
+          selection,
+          activeBoardId: selectionBoardId(selection),
+        }),
+
       hydrateFromServer: async () => {
         try {
-          let { boards, boardFiles, mode } = await loadBoardsFromServer()
+          const existing = get().boards
+          let { boards, boardFiles, mode } =
+            await loadBoardsFromServer(existing)
           let layoutFitTick = 0
           boards = boards.map((b) => {
-            if (!boardNeedsAutoLayout(b)) return b
-            const laid = autoLayoutBoard(b)
+            if (!boardNeedsInitialLayout(b)) return b
+            const layout = b.layout ?? DEFAULT_BOARD_LAYOUT
+            if (layout === 'freeform') return b
             layoutFitTick = Date.now()
-            if (mode === 'supabase') {
-              void upsertFullBoardToSupabase(laid).catch(() => {})
-            }
-            return laid
+            return layoutBoard(b, layout)
           })
-          const active =
-            get().activeBoardId &&
-            boards.some((b) => b.id === get().activeBoardId)
-              ? get().activeBoardId
-              : boards[0]?.id ?? null
+
+          const workspaceTree = ensureWorkspaceTree(
+            boards,
+            get().workspaceTree,
+          )
+          const prev = get().selection
+          const selectionValid =
+            prev &&
+            ((prev.kind === 'board' &&
+              boards.some((b) => b.id === prev.boardId)) ||
+              (prev.kind === 'markdown' &&
+                Boolean(get().workspaceDocuments[prev.documentId])) ||
+              (prev.kind === 'pdf' &&
+                Boolean(get().workspaceDocuments[prev.documentId])))
+          const selection: WorkspaceSelection = selectionValid
+            ? prev
+            : boards[0]
+              ? { kind: 'board' as const, boardId: boards[0].id }
+              : null
+
           set({
             boards,
-            boardFiles,
-            activeBoardId: active,
+            boardFiles: existing.length ? get().boardFiles : boardFiles,
+            workspaceTree,
+            selection,
+            activeBoardId: selectionBoardId(selection),
             persistenceMode: mode,
             hydrated: true,
             syncError: null,
             layoutFitTick,
           })
         } catch {
+          const seed = await loadSeedBoards()
+          const board = seed[0]
           set({
-            boards: [fallbackSample],
-            activeBoardId: fallbackSample.id,
-            boardFiles: { [fallbackSample.id]: 'katalon-example.json' },
-            persistenceMode: 'offline',
+            boards: board ? [board] : [],
+            activeBoardId: board?.id ?? null,
+            selection: board
+              ? { kind: 'board' as const, boardId: board.id }
+              : null,
+            workspaceTree: board
+              ? [createBoardRefNode(board.id, board.name)]
+              : [],
+            persistenceMode: 'local',
             hydrated: true,
-            syncError:
-              'Unable to load boards from server. Showing local fallback only.',
+            syncError: null,
           })
         }
       },
 
       reloadFromServer: async () => {
+        if (get().persistenceMode !== 'supabase') return
         set({ syncStatus: 'saving', syncError: null })
         try {
-          const { boards, boardFiles, mode } = await loadBoardsFromServer()
-          const active =
-            get().activeBoardId &&
-            boards.some((b) => b.id === get().activeBoardId)
-              ? get().activeBoardId
-              : boards[0]?.id ?? null
+          const { boards, boardFiles, mode } = await loadBoardsFromServer([])
+          const selection = get().selection
           set({
             boards,
             boardFiles,
-            activeBoardId: active,
             persistenceMode: mode,
             syncStatus: 'saved',
             syncError: null,
+            workspaceTree: ensureWorkspaceTree(boards, get().workspaceTree),
+            activeBoardId:
+              selection?.kind === 'board' ? selection.boardId : boards[0]?.id,
           })
         } catch {
           set({
@@ -204,25 +320,58 @@ export const useSchemaStore = create<SchemaStore>()(
         }
       },
 
+      applyActiveBoardLayout: () => {
+        const boardId = get().activeBoardId
+        if (!boardId) return
+        const board = get().boards.find((b) => b.id === boardId)
+        if (!board) return
+        const layout = board.layout ?? DEFAULT_BOARD_LAYOUT
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, boardId, (b) =>
+            applyLayout(b, layout),
+          ),
+          layoutFitTick: Date.now(),
+        }))
+        schedulePersist(get, set, boardId)
+      },
+
+      setBoardLayout: (boardId, layout) => {
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, boardId, (b) =>
+            transitionLayout(b, layout),
+          ),
+          layoutFitTick: Date.now(),
+        }))
+        schedulePersist(get, set, boardId)
+      },
+
       createBoard: (name) => {
         const board = schema.createBoard(name)
         const file = uniqueFilename(board.name, get().boardFiles)
         set((state) => ({
           boards: [...state.boards, board],
           activeBoardId: board.id,
+          selection: { kind: 'board', boardId: board.id },
           boardFiles: { ...state.boardFiles, [board.id]: file },
+          workspaceTree: registerBoardInWorkspace(state.workspaceTree, board),
         }))
         const mode = get().persistenceMode
         if (mode === 'supabase') {
-          void upsertFullBoardToSupabase(board).catch(() => {
-            set({
-              syncError:
-                'Unable to save changes. Your changes have not been synchronized.',
-            })
-          })
+          void upsertFullBoardToSupabase(board).catch(() => {})
         } else if (mode === 'file') {
           void createBoardFile(board, file)
         }
+      },
+
+      createFolder: (name, parentFolderId = null) => {
+        const folder = createFolderNode(name)
+        set((state) => ({
+          workspaceTree: insertNode(
+            state.workspaceTree,
+            parentFolderId,
+            folder,
+          ),
+        }))
       },
 
       renameBoard: (boardId, name) => {
@@ -230,8 +379,15 @@ export const useSchemaStore = create<SchemaStore>()(
           boards: schema.updateBoardInList(state.boards, boardId, (b) =>
             schema.renameBoard(b, name),
           ),
+          workspaceTree: mapBoardNames(state.workspaceTree, boardId, name),
         }))
         schedulePersist(get, set, boardId)
+      },
+
+      renameWorkspaceItem: (itemId, name) => {
+        set((state) => ({
+          workspaceTree: renameNode(state.workspaceTree, itemId, name),
+        }))
       },
 
       deleteBoard: (boardId) => {
@@ -240,37 +396,99 @@ export const useSchemaStore = create<SchemaStore>()(
         set((state) => {
           const boards = state.boards.filter((b) => b.id !== boardId)
           const { [boardId]: _, ...boardFiles } = state.boardFiles
-          let activeBoardId = state.activeBoardId
-          if (activeBoardId === boardId) {
-            activeBoardId = boards[0]?.id ?? null
+          let tree = state.workspaceTree
+          const walkRemove = (nodes: WorkspaceTreeNode[]): WorkspaceTreeNode[] =>
+            nodes
+              .filter((n) => !(n.type === 'board' && n.boardId === boardId))
+              .map((n) =>
+                n.children
+                  ? { ...n, children: walkRemove(n.children) }
+                  : n,
+              )
+          tree = walkRemove(tree)
+          let selection: WorkspaceSelection = state.selection
+          if (
+            state.selection?.kind === 'board' &&
+            state.selection.boardId === boardId
+          ) {
+            selection = boards[0]
+              ? { kind: 'board', boardId: boards[0].id }
+              : null
           }
-          return { boards, activeBoardId, boardFiles }
+          return {
+            boards,
+            boardFiles,
+            workspaceTree: tree,
+            selection,
+            activeBoardId: selectionBoardId(selection),
+          }
         })
         if (mode === 'supabase') {
-          void deleteBoardFromSupabase(boardId).catch(() => {
-            set({
-              syncError:
-                'Unable to save changes. Your changes have not been synchronized.',
-            })
-          })
+          void deleteBoardFromSupabase(boardId).catch(() => {})
         } else if (mode === 'file' && file) {
           void deleteBoardFile(file)
         }
       },
 
-      setActiveBoard: (boardId) => set({ activeBoardId: boardId }),
-
-      autoLayoutActiveBoard: () => {
-        const { activeBoardId } = get()
-        if (!activeBoardId) return
+      deleteWorkspaceItem: (itemId) => {
+        const node = findInTree(get().workspaceTree, itemId)
+        if (!node) return
+        if (node.type === 'board' && node.boardId) {
+          get().deleteBoard(node.boardId)
+          return
+        }
+        if (
+          (node.type === 'markdown' || node.type === 'pdf') &&
+          node.documentId
+        ) {
+          const docId = node.documentId
+          set((state) => {
+            const { tree } = removeNode(state.workspaceTree, itemId)
+            const { [docId]: _, ...docs } = state.workspaceDocuments
+            let selection: WorkspaceSelection = state.selection
+            if (
+              state.selection &&
+              state.selection.kind !== 'board' &&
+              state.selection.documentId === docId
+            ) {
+              selection = null
+            }
+            return {
+              workspaceTree: tree,
+              workspaceDocuments: docs,
+              selection,
+              activeBoardId: selectionBoardId(selection),
+            }
+          })
+          return
+        }
         set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
-            autoLayoutBoard(b),
-          ),
-          layoutFitTick: Date.now(),
+          workspaceTree: removeNode(state.workspaceTree, itemId).tree,
         }))
-        schedulePersist(get, set, activeBoardId)
       },
+
+      toggleWorkspaceFolder: (folderId) => {
+        set((state) => ({
+          workspaceTree: toggleFolderCollapsed(state.workspaceTree, folderId),
+        }))
+      },
+
+      moveWorkspaceItem: (itemId, targetParentId, targetIndex) => {
+        set((state) => ({
+          workspaceTree: moveNodeInTree(
+            state.workspaceTree,
+            itemId,
+            targetParentId,
+            targetIndex,
+          ),
+        }))
+      },
+
+      setActiveBoard: (boardId) =>
+        set({
+          activeBoardId: boardId,
+          selection: { kind: 'board', boardId },
+        }),
 
       addNode: (name, parentId, position) => {
         const { activeBoardId } = get()
@@ -332,9 +550,13 @@ export const useSchemaStore = create<SchemaStore>()(
         const { activeBoardId } = get()
         if (!activeBoardId) return
         set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
-            schema.moveNode(b, nodeId, x, y),
-          ),
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) => {
+            let next = schema.moveNode(b, nodeId, x, y)
+            if ((b.layout ?? DEFAULT_BOARD_LAYOUT) === 'freeform') {
+              next = schema.snapshotFreeformPositions(next)
+            }
+            return next
+          }),
         }))
         schedulePersist(get, set, activeBoardId)
       },
@@ -401,77 +623,152 @@ export const useSchemaStore = create<SchemaStore>()(
 
       importBoard: (rawBoard) => {
         const board = schema.normalizeImportedBoard(rawBoard)
-        const file = uniqueFilename(board.name, get().boardFiles)
+        const layout = board.layout ?? DEFAULT_BOARD_LAYOUT
+        const laid =
+          layout === 'freeform'
+            ? board
+            : layoutBoard(board, layout)
+        const file = uniqueFilename(laid.name, get().boardFiles)
         const mode = get().persistenceMode
-        void (async () => {
-          set({ syncStatus: 'saving', syncError: null })
-          try {
-            if (mode === 'supabase') {
-              await upsertFullBoardToSupabase(board)
-            } else if (mode === 'file') {
-              await createBoardFile(board, file)
-            }
-            set((state) => ({
-              boards: [...state.boards.filter((b) => b.id !== board.id), board],
-              activeBoardId: board.id,
-              boardFiles: { ...state.boardFiles, [board.id]: file },
-              syncStatus: 'saved',
-            }))
-          } catch {
-            set({
-              syncStatus: 'error',
-              syncError: 'Import failed — board was not saved to the server.',
+
+        const finish = () => {
+          set((state) => ({
+            boards: [
+              ...state.boards.filter((b) => b.id !== laid.id),
+              laid,
+            ],
+            activeBoardId: laid.id,
+            selection: { kind: 'board', boardId: laid.id },
+            boardFiles: { ...state.boardFiles, [laid.id]: file },
+            workspaceTree: registerBoardInWorkspace(state.workspaceTree, laid),
+            layoutFitTick: Date.now(),
+            syncStatus: 'saved',
+          }))
+        }
+
+        if (mode === 'supabase') {
+          void upsertFullBoardToSupabase(laid)
+            .then(finish)
+            .catch(() => {
+              set({
+                syncStatus: 'error',
+                syncError: 'Import failed — board was not saved to the server.',
+              })
             })
+          return
+        }
+        if (mode === 'file') {
+          void createBoardFile(laid, file).then(finish)
+          return
+        }
+        finish()
+      },
+
+      importMarkdownFile: async (file) => {
+        const text = await file.text()
+        const doc: WorkspaceDocument = {
+          id: createId('doc'),
+          type: 'markdown',
+          name: file.name,
+          content: text,
+        }
+        set((state) => ({
+          workspaceDocuments: { ...state.workspaceDocuments, [doc.id]: doc },
+          workspaceTree: insertNode(
+            state.workspaceTree,
+            null,
+            createDocumentRefNode(doc),
+          ),
+          selection: { kind: 'markdown', documentId: doc.id },
+          activeBoardId: null,
+        }))
+      },
+
+      importPdfFile: async (file) => {
+        const buffer = await file.arrayBuffer()
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce(
+            (data, byte) => data + String.fromCharCode(byte),
+            '',
+          ),
+        )
+        const doc: WorkspaceDocument = {
+          id: createId('doc'),
+          type: 'pdf',
+          name: file.name,
+          content: `data:application/pdf;base64,${base64}`,
+        }
+        set((state) => ({
+          workspaceDocuments: { ...state.workspaceDocuments, [doc.id]: doc },
+          workspaceTree: insertNode(
+            state.workspaceTree,
+            null,
+            createDocumentRefNode(doc),
+          ),
+          selection: { kind: 'pdf', documentId: doc.id },
+          activeBoardId: null,
+        }))
+      },
+
+      updateMarkdownDocument: (documentId, content) => {
+        set((state) => {
+          const doc = state.workspaceDocuments[documentId]
+          if (!doc || doc.type !== 'markdown') return state
+          return {
+            workspaceDocuments: {
+              ...state.workspaceDocuments,
+              [documentId]: { ...doc, content },
+            },
           }
-        })()
+        })
       },
 
       replaceActiveBoard: (rawBoard) => {
-        const normalized = schema.normalizeImportedBoard(rawBoard)
-        const { activeBoardId, persistenceMode } = get()
-        if (!activeBoardId) {
-          get().importBoard(normalized)
-          return
-        }
-        const board = { ...normalized, id: activeBoardId }
-        set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, () => board),
-        }))
-        void (async () => {
-          set({ syncStatus: 'saving', syncError: null })
-          try {
-            if (persistenceMode === 'supabase') {
-              await upsertFullBoardToSupabase(board)
-            } else if (persistenceMode === 'file') {
-              const file = get().boardFiles[activeBoardId]
-              if (file) await saveBoardToFile(board, file)
-            }
-            set({ syncStatus: 'saved' })
-          } catch {
-            set({
-              syncStatus: 'error',
-              syncError: 'Import failed — board was not saved to the server.',
-            })
-          }
-        })()
+        get().importBoard(rawBoard)
       },
     }),
     {
-      name: 'schema-mapper-ui-v1',
+      name: 'schema-mapper-data-v2',
       partialize: (state) => ({
+        boards: state.boards,
+        boardFiles: state.boardFiles,
+        workspaceTree: state.workspaceTree,
+        workspaceDocuments: state.workspaceDocuments,
+        selection: state.selection,
         activeBoardId: state.activeBoardId,
-      }),
-      merge: (persisted, current) => ({
-        ...current,
-        activeBoardId:
-          (persisted as { activeBoardId?: string | null })?.activeBoardId ??
-          current.activeBoardId,
-        boards: [],
-        hydrated: false,
       }),
     },
   ),
 )
+
+function mapBoardNames(
+  nodes: WorkspaceTreeNode[],
+  boardId: string,
+  name: string,
+): WorkspaceTreeNode[] {
+  return nodes.map((n) => {
+    const next =
+      n.type === 'board' && n.boardId === boardId ? { ...n, name } : n
+    if (next.children) {
+      return { ...next, children: mapBoardNames(next.children, boardId, name) }
+    }
+    return next
+  })
+}
+
+function findInTree(
+  nodes: WorkspaceTreeNode[],
+  id: string,
+): WorkspaceTreeNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children) {
+      const found = findInTree(n.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
 
 export function getDeleteNodeMessage(nodes: SchemaNode[], nodeId: string): string {
   const count = countDescendants(nodes, nodeId)

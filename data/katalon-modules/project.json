@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-project",
+  "name": "Katalon Project",
+  "color": "#E8F5E9",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-project-root",
+      "name": "Project",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

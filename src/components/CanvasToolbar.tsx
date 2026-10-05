@@ -1,6 +1,7 @@
 import type { ReactFlowInstance } from '@xyflow/react'
 import { useSchemaStore } from '../store/schemaStore'
 import { ImportExportButtons } from './ImportExport'
+import { LayoutSelector } from './LayoutSelector'
 
 interface CanvasToolbarProps {
   rf: ReactFlowInstance | null
@@ -9,7 +10,7 @@ interface CanvasToolbarProps {
 
 export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
   const reloadFromServer = useSchemaStore((s) => s.reloadFromServer)
-  const autoLayoutActiveBoard = useSchemaStore((s) => s.autoLayoutActiveBoard)
+  const applyLayout = useSchemaStore((s) => s.applyActiveBoardLayout)
   const persistenceMode = useSchemaStore((s) => s.persistenceMode)
 
   return (
@@ -17,10 +18,12 @@ export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
       <button type="button" className="toolbar-btn" onClick={onAddNode}>
         + Node
       </button>
+      <LayoutSelector />
       <button
         type="button"
         className="toolbar-btn"
-        onClick={() => autoLayoutActiveBoard()}
+        title="Re-apply current layout"
+        onClick={() => applyLayout()}
       >
         Auto Layout
       </button>

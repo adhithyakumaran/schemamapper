@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-debug",
+  "name": "Katalon Debug",
+  "color": "#FFFDE7",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-debug-root",
+      "name": "Debug",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

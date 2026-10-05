@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-file",
+  "name": "Katalon File",
+  "color": "#E3F2FD",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-file-root",
+      "name": "File",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "Module slice — merge into katalon-complete.json when ready.",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

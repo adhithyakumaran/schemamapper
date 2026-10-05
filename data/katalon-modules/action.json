@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-action",
+  "name": "Katalon Action",
+  "color": "#F3E5F5",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-action-root",
+      "name": "Action",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "Module slice for Action menu research.",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-tools",
+  "name": "Katalon Tools",
+  "color": "#FFF3E0",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-tools-root",
+      "name": "Tools",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

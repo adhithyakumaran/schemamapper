@@ -1,0 +1,481 @@
+{
+  "id": "board-katalon-complete",
+  "name": "Katalon Studio (Complete)",
+  "color": "#E8F5E9",
+  "nodes": [
+    {
+      "id": "node-katalon-studio",
+      "name": "Katalon Studio",
+      "parentId": null,
+      "position": {
+        "x": 80,
+        "y": 40
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-menu-bar",
+      "name": "Menu Bar",
+      "parentId": "node-katalon-studio",
+      "position": {
+        "x": 3930,
+        "y": 180
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-file",
+      "name": "File",
+      "parentId": "node-menu-bar",
+      "position": {
+        "x": 7340,
+        "y": 320
+      },
+      "note": "Katalon Studio 11.5 File menu. Attach File menu screenshot evidence via Edit Node when captures are available.",
+      "screenshots": []
+    },
+    {
+      "id": "node-new",
+      "name": "New",
+      "parentId": "node-file",
+      "position": {
+        "x": 8770,
+        "y": 460
+      },
+      "note": "File > New submenu. Attach New submenu screenshot evidence via Edit Node when captures are available.",
+      "screenshots": []
+    },
+    {
+      "id": "node-project",
+      "name": "Project",
+      "parentId": "node-new",
+      "position": {
+        "x": 8770,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-folder",
+      "name": "Folder",
+      "parentId": "node-new",
+      "position": {
+        "x": 8990,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-api-collection",
+      "name": "API Collection",
+      "parentId": "node-new",
+      "position": {
+        "x": 9210,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test-case",
+      "name": "Test Case",
+      "parentId": "node-new",
+      "position": {
+        "x": 9430,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test-suite",
+      "name": "Test Suite",
+      "parentId": "node-new",
+      "position": {
+        "x": 9650,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test-suite-collection",
+      "name": "Test Suite Collection",
+      "parentId": "node-new",
+      "position": {
+        "x": 9870,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test-object",
+      "name": "Test Object",
+      "parentId": "node-new",
+      "position": {
+        "x": 10090,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-web-service-request",
+      "name": "Web Service Request",
+      "parentId": "node-new",
+      "position": {
+        "x": 10310,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test-data",
+      "name": "Test Data",
+      "parentId": "node-new",
+      "position": {
+        "x": 10530,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-package",
+      "name": "Package",
+      "parentId": "node-new",
+      "position": {
+        "x": 10750,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-keyword",
+      "name": "Keyword",
+      "parentId": "node-new",
+      "position": {
+        "x": 10970,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-groovy-script",
+      "name": "Groovy Script",
+      "parentId": "node-new",
+      "position": {
+        "x": 11190,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-bdd-feature-file",
+      "name": "BDD Feature File",
+      "parentId": "node-new",
+      "position": {
+        "x": 11410,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-checkpoint",
+      "name": "Checkpoint",
+      "parentId": "node-new",
+      "position": {
+        "x": 11630,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-new-sample-project",
+      "name": "New Sample Project",
+      "parentId": "node-file",
+      "position": {
+        "x": 11190,
+        "y": 460
+      },
+      "note": "File > New Sample Project submenu. Attach submenu screenshot evidence via Edit Node when captures are available.",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-api-tests",
+      "name": "Sample API Tests Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 11190,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-bdd-cucumber",
+      "name": "Sample BDD Cucumber Tests Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 11410,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-web-ui-cart",
+      "name": "Sample Web UI Tests Project (Shopping Cart)",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 11630,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-web-ui-healthcare",
+      "name": "Sample Web UI Tests Project (Healthcare)",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 11850,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-visual-testops",
+      "name": "Sample Visual Testing with TestOps Vision Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 12070,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-android",
+      "name": "Sample Android Mobile Tests Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 12290,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-ios",
+      "name": "Sample iOS Mobile Tests Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 12510,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-sample-ai-assistant",
+      "name": "Sample Katalon AI Assistant Tests Project",
+      "parentId": "node-new-sample-project",
+      "position": {
+        "x": 12730,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-open-project",
+      "name": "Open Project",
+      "parentId": "node-file",
+      "position": {
+        "x": 12180,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-import-selenium-ide",
+      "name": "Import Selenium IDE Project",
+      "parentId": "node-file",
+      "position": {
+        "x": 12400,
+        "y": 460
+      },
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
+      "screenshots": []
+    },
+    {
+      "id": "node-clean-up",
+      "name": "Clean up...",
+      "parentId": "node-file",
+      "position": {
+        "x": 12620,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-save",
+      "name": "Save",
+      "parentId": "node-file",
+      "position": {
+        "x": 12840,
+        "y": 460
+      },
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
+      "screenshots": []
+    },
+    {
+      "id": "node-save-all",
+      "name": "Save All",
+      "parentId": "node-file",
+      "position": {
+        "x": 13060,
+        "y": 460
+      },
+      "note": "Observed disabled in the captured Katalon Studio 11.5 File menu screenshot.",
+      "screenshots": []
+    },
+    {
+      "id": "node-import-settings",
+      "name": "Import Settings",
+      "parentId": "node-file",
+      "position": {
+        "x": 13280,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-import-keywords",
+      "name": "Import Keywords",
+      "parentId": "node-file",
+      "position": {
+        "x": 13610,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-import-keywords-folder",
+      "name": "Folder",
+      "parentId": "node-import-keywords",
+      "position": {
+        "x": 13610,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-import-keywords-git",
+      "name": "Git",
+      "parentId": "node-import-keywords",
+      "position": {
+        "x": 13830,
+        "y": 600
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-test",
+      "name": "test",
+      "parentId": "node-file",
+      "position": {
+        "x": 13940,
+        "y": 460
+      },
+      "note": "Observed near the bottom of the File menu. Captured path shown as C:\\Users\\adhit\\Katalon Studio\\recorder.",
+      "screenshots": []
+    },
+    {
+      "id": "node-quit",
+      "name": "Quit",
+      "parentId": "node-file",
+      "position": {
+        "x": 14160,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-action",
+      "name": "Action",
+      "parentId": "node-menu-bar",
+      "position": {
+        "x": 11300,
+        "y": 320
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-spy",
+      "name": "Spy",
+      "parentId": "node-action",
+      "position": {
+        "x": 11300,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-record",
+      "name": "Record",
+      "parentId": "node-action",
+      "position": {
+        "x": 11520,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-run",
+      "name": "Run",
+      "parentId": "node-action",
+      "position": {
+        "x": 11740,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    },
+    {
+      "id": "node-debug",
+      "name": "Debug",
+      "parentId": "node-action",
+      "position": {
+        "x": 11960,
+        "y": 460
+      },
+      "note": "",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

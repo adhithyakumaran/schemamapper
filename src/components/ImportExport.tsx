@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { downloadBoardJson, downloadBoardPdf, downloadBoardPng } from '../services/boardExport'
 import { useSchemaStore } from '../store/schemaStore'
-import type { Board } from '../types/schema'
 
 export function ImportExportButtons() {
   const board = useSchemaStore((s) =>
     s.boards.find((b) => b.id === s.activeBoardId) ?? null,
   )
   const importBoard = useSchemaStore((s) => s.importBoard)
-  const replaceActiveBoard = useSchemaStore((s) => s.replaceActiveBoard)
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -28,12 +26,8 @@ export function ImportExportButtons() {
   const onImportJson = async (file: File) => {
     try {
       const text = await file.text()
-      const parsed = JSON.parse(text) as Board
-      if (board && confirm('Replace current board with imported JSON?')) {
-        replaceActiveBoard(parsed)
-      } else {
-        importBoard(parsed)
-      }
+      const parsed = JSON.parse(text)
+      importBoard(parsed)
     } catch {
       alert('Invalid board JSON')
     }
@@ -103,7 +97,7 @@ export function ImportExportButtons() {
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
-          if (file) onImportJson(file)
+          if (file) void onImportJson(file)
           e.target.value = ''
         }}
       />

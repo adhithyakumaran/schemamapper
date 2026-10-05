@@ -1,0 +1,17 @@
+{
+  "id": "board-katalon-help",
+  "name": "Katalon Help",
+  "color": "#FCE4EC",
+  "layout": "vertical-tree",
+  "nodes": [
+    {
+      "id": "node-help-root",
+      "name": "Help",
+      "parentId": null,
+      "position": { "x": 0, "y": 0 },
+      "note": "",
+      "screenshots": []
+    }
+  ],
+  "connections": []
+}

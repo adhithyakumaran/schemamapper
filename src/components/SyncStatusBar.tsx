@@ -5,14 +5,7 @@ export function SyncStatusBar() {
   const syncStatus = useSchemaStore((s) => s.syncStatus)
   const persistenceMode = useSchemaStore((s) => s.persistenceMode)
 
-  if (persistenceMode === 'offline') {
-    return (
-      <div className="status-offline border-b px-4 py-1.5 text-xs">
-        Supabase is not configured. Changes are not synchronized to production.
-        Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel.
-      </div>
-    )
-  }
+  if (persistenceMode !== 'supabase') return null
 
   if (syncError) {
     return (
