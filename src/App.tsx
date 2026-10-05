@@ -9,6 +9,7 @@ import { BoardDialog } from './components/dialogs/BoardDialog'
 import { DeleteNodeDialog } from './components/dialogs/DeleteNodeDialog'
 import { EditNodeDialog } from './components/dialogs/EditNodeDialog'
 import { NoteDialog } from './components/dialogs/NoteDialog'
+import { SyncStatusBar } from './components/SyncStatusBar'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
@@ -34,7 +35,7 @@ function AppHeader() {
 }
 
 export default function App() {
-  const hydrate = useSchemaStore((s) => s.hydrateFromProjectFiles)
+  const hydrate = useSchemaStore((s) => s.hydrateFromServer)
   const hydrated = useSchemaStore((s) => s.hydrated)
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function App() {
   return (
     <div className="flex h-full flex-col">
       <AppHeader />
+      <SyncStatusBar />
       <div className="flex min-h-0 flex-1">
         <BoardSidebar />
         <Canvas />

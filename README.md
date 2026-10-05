@@ -1,55 +1,60 @@
 # Schema Mapper
 
-A lightweight internal whiteboard for mapping hierarchical UI/application structure.
+Internal hierarchical UI schema whiteboard.
 
-**The schema is the source of truth.** The canvas only renders structured data (`nodes` with `parentId` relationships).
+## Persistence (production)
 
-## Schema files (Cursor-friendly)
+| Layer | Role |
+|--------|------|
+| **Supabase Postgres** | Live boards, nodes, connections, evidence metadata |
+| **Supabase Storage** (`schema-evidence`) | Screenshot files |
+| **`data/boards/*.json`** | Portable / versioned schema for Cursor (not auto-synced to Supabase) |
 
-Boards live as human-readable JSON under:
-
-```
-data/boards/
-├── _registry.json          # board id → filename mapping
-├── katalon-example.json    # sample Katalon menu tree
-└── …                       # one file per board
-```
-
-Example node:
-
-```json
-{
-  "id": "node-file",
-  "name": "File",
-  "parentId": "node-menu-bar",
-  "position": { "x": 100, "y": 200 },
-  "note": "",
-  "screenshot": null
-}
-```
-
-You can edit these files directly in the repo; restart dev or refresh after changes. While `npm run dev` is running, UI edits are also written back to `data/boards/` via the dev API.
-
-## Architecture
+### Vercel environment variables
 
 ```
-data/boards/*.json  →  schemaService  →  Zustand store  →  React Flow canvas
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-- `src/services/schemaService.ts` — all board/node mutations (create, add child, move, notes, screenshots, import/export)
-- `src/services/persistence.ts` — load/save boards from `data/boards` (dev server)
-- `src/store/schemaStore.ts` — thin UI state + debounced file sync
+Do not commit secrets. Do not use the service role key in the frontend.
 
-Hierarchy is **only** from `parentId`. Connectors on the canvas are derived at render time.
+### Database setup
+
+Run `supabase/migrations/001_schema_mapper.sql` in the Supabase SQL editor (tables, RLS, storage bucket).
+
+**RLS:** permissive anon policies for internal research — tighten before any public deployment.
+
+### Seed Katalon board
+
+**Automatic:** On first load, if Supabase has no boards, the app upserts `data/boards/katalon-example.json`.
+
+**Manual (CLI):**
+
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-supabase.mjs
+```
+
+### Local development
+
+- **With Supabase env vars:** same as production (Supabase is authoritative).
+- **Without Supabase:** `npm run dev` uses the Vite file API (`data/boards/`) when available.
+
+`localStorage` stores only **active board id** (UI preference). Board schema is **not** persisted in localStorage.
+
+### Sync
+
+- **Import JSON** → normalizes → **Supabase** (production) or files (dev).
+- **Export JSON / PDF / PNG** → from current in-memory board (loaded from Supabase in production).
+- **Reload** (toolbar, when using Supabase) → refetch from server.
 
 ## Run locally
 
 ```bash
 npm install
+cp .env.example .env   # add Supabase keys for production-like dev
 npm run dev
 ```
-
-Open http://127.0.0.1:43123
 
 ## Build
 
@@ -57,8 +62,10 @@ Open http://127.0.0.1:43123
 npm run build
 ```
 
-Static builds copy `data/boards/` into `dist/data/boards/` for read-only reference. Use Export/Import or the dev server for round-tripping edits.
+## Architecture
 
-## Tech
+```
+Supabase / dev files  →  schemaService  →  Zustand  →  React Flow
+```
 
-React, TypeScript, Vite, @xyflow/react, Zustand
+Hierarchy: `parentId`. Cross-links: `board.connections[]`.

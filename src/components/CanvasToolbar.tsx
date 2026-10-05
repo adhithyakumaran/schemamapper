@@ -1,4 +1,5 @@
 import type { ReactFlowInstance } from '@xyflow/react'
+import { useSchemaStore } from '../store/schemaStore'
 import { ImportExportButtons } from './ImportExport'
 
 interface CanvasToolbarProps {
@@ -7,6 +8,9 @@ interface CanvasToolbarProps {
 }
 
 export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
+  const reloadFromServer = useSchemaStore((s) => s.reloadFromServer)
+  const persistenceMode = useSchemaStore((s) => s.persistenceMode)
+
   return (
     <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white/95 p-1 shadow-sm">
       <button type="button" className="toolbar-btn" onClick={onAddNode}>
@@ -34,6 +38,15 @@ export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
         Fit
       </button>
       <ImportExportButtons />
+      {persistenceMode === 'supabase' && (
+        <button
+          type="button"
+          className="toolbar-btn"
+          onClick={() => void reloadFromServer()}
+        >
+          Reload
+        </button>
+      )}
     </div>
   )
 }

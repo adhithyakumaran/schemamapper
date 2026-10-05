@@ -1,15 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { createKatalonExampleBoard } from '../data/sampleBoard'
 import { countDescendants } from '../lib/tree'
+import { loadBoardsFromServer, type PersistenceMode } from '../services/boardLoader'
 import {
   createBoardFile,
   deleteBoardFile,
-  loadBoardsFromFiles,
   saveBoardToFile,
 } from '../services/persistence'
 import * as schema from '../services/schemaService'
+import {
+  deleteBoardFromSupabase,
+  syncNodeScreenshots,
+  upsertFullBoardToSupabase,
+} from '../services/supabaseBoardService'
 import type { AppData, Board, DialogState, SchemaNode } from '../types/schema'
+import { createKatalonExampleBoard } from '../data/sampleBoard'
 
 export type EdgeMenuState = {
   connectionId: string
@@ -17,14 +22,19 @@ export type EdgeMenuState = {
   y: number
 } | null
 
+export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 interface SchemaStore extends AppData {
   hydrated: boolean
-  filePersistence: boolean
+  persistenceMode: PersistenceMode
+  syncStatus: SyncStatus
+  syncError: string | null
   dialog: DialogState
   edgeMenu: EdgeMenuState
   setDialog: (dialog: DialogState) => void
   setEdgeMenu: (menu: EdgeMenuState) => void
-  hydrateFromProjectFiles: () => Promise<void>
+  hydrateFromServer: () => Promise<void>
+  reloadFromServer: () => Promise<void>
   createBoard: (name: string) => void
   renameBoard: (boardId: string, name: string) => void
   deleteBoard: (boardId: string) => void
@@ -51,22 +61,9 @@ interface SchemaStore extends AppData {
   replaceActiveBoard: (board: Board) => void
 }
 
-const sample = createKatalonExampleBoard()
-const sampleFile = 'katalon-example.json'
+const fallbackSample = createKatalonExampleBoard()
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
-
-function schedulePersistBoard(
-  board: Board,
-  file: string | undefined,
-  filePersistence: boolean,
-) {
-  if (!filePersistence || !file) return
-  if (persistTimer) clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => {
-    void saveBoardToFile(board, file)
-  }, 400)
-}
 
 function uniqueFilename(
   name: string,
@@ -83,37 +80,113 @@ function uniqueFilename(
   return file
 }
 
+function schedulePersist(
+  get: () => SchemaStore,
+  set: (partial: Partial<SchemaStore>) => void,
+  boardId: string,
+) {
+  const { persistenceMode, boardFiles, boards } = get()
+  const board = boards.find((b) => b.id === boardId)
+  if (!board) return
+
+  if (persistTimer) clearTimeout(persistTimer)
+
+  if (persistenceMode === 'supabase') {
+    persistTimer = setTimeout(() => {
+      void (async () => {
+        set({ syncStatus: 'saving', syncError: null })
+        try {
+          await upsertFullBoardToSupabase(board)
+          set({ syncStatus: 'saved', syncError: null })
+        } catch {
+          set({
+            syncStatus: 'error',
+            syncError:
+              'Unable to save changes. Your changes have not been synchronized.',
+          })
+        }
+      })()
+    }, 450)
+    return
+  }
+
+  if (persistenceMode === 'file') {
+    const file = boardFiles[boardId]
+    if (!file) return
+    persistTimer = setTimeout(() => {
+      void saveBoardToFile(board, file)
+    }, 400)
+  }
+}
+
 export const useSchemaStore = create<SchemaStore>()(
   persist(
     (set, get) => ({
-      boards: [sample],
-      activeBoardId: sample.id,
-      boardFiles: { [sample.id]: sampleFile },
+      boards: [],
+      activeBoardId: null,
+      boardFiles: {},
       hydrated: false,
-      filePersistence: false,
+      persistenceMode: 'offline',
+      syncStatus: 'idle',
+      syncError: null,
       dialog: null,
       edgeMenu: null,
 
       setDialog: (dialog) => set({ dialog }),
       setEdgeMenu: (edgeMenu) => set({ edgeMenu }),
 
-      hydrateFromProjectFiles: async () => {
-        const loaded = await loadBoardsFromFiles()
-        if (loaded && loaded.boards.length > 0) {
+      hydrateFromServer: async () => {
+        try {
+          const { boards, boardFiles, mode } = await loadBoardsFromServer()
+          const active =
+            get().activeBoardId &&
+            boards.some((b) => b.id === get().activeBoardId)
+              ? get().activeBoardId
+              : boards[0]?.id ?? null
           set({
-            boards: loaded.boards,
-            boardFiles: loaded.boardFiles,
-            activeBoardId:
-              get().activeBoardId &&
-              loaded.boards.some((b) => b.id === get().activeBoardId)
-                ? get().activeBoardId
-                : loaded.boards[0].id,
+            boards,
+            boardFiles,
+            activeBoardId: active,
+            persistenceMode: mode,
             hydrated: true,
-            filePersistence: true,
+            syncError: null,
           })
-          return
+        } catch {
+          set({
+            boards: [fallbackSample],
+            activeBoardId: fallbackSample.id,
+            boardFiles: { [fallbackSample.id]: 'katalon-example.json' },
+            persistenceMode: 'offline',
+            hydrated: true,
+            syncError:
+              'Unable to load boards from server. Showing local fallback only.',
+          })
         }
-        set({ hydrated: true, filePersistence: false })
+      },
+
+      reloadFromServer: async () => {
+        set({ syncStatus: 'saving', syncError: null })
+        try {
+          const { boards, boardFiles, mode } = await loadBoardsFromServer()
+          const active =
+            get().activeBoardId &&
+            boards.some((b) => b.id === get().activeBoardId)
+              ? get().activeBoardId
+              : boards[0]?.id ?? null
+          set({
+            boards,
+            boardFiles,
+            activeBoardId: active,
+            persistenceMode: mode,
+            syncStatus: 'saved',
+            syncError: null,
+          })
+        } catch {
+          set({
+            syncStatus: 'error',
+            syncError: 'Unable to reload from server.',
+          })
+        }
       },
 
       createBoard: (name) => {
@@ -124,7 +197,15 @@ export const useSchemaStore = create<SchemaStore>()(
           activeBoardId: board.id,
           boardFiles: { ...state.boardFiles, [board.id]: file },
         }))
-        if (get().filePersistence) {
+        const mode = get().persistenceMode
+        if (mode === 'supabase') {
+          void upsertFullBoardToSupabase(board).catch(() => {
+            set({
+              syncError:
+                'Unable to save changes. Your changes have not been synchronized.',
+            })
+          })
+        } else if (mode === 'file') {
           void createBoardFile(board, file)
         }
       },
@@ -135,14 +216,12 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.renameBoard(b, name),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === boardId)
-        if (board) schedulePersistBoard(board, boardFiles[boardId], filePersistence)
+        schedulePersist(get, set, boardId)
       },
 
       deleteBoard: (boardId) => {
         const file = get().boardFiles[boardId]
-        const filePersistence = get().filePersistence
+        const mode = get().persistenceMode
         set((state) => {
           const boards = state.boards.filter((b) => b.id !== boardId)
           const { [boardId]: _, ...boardFiles } = state.boardFiles
@@ -152,7 +231,16 @@ export const useSchemaStore = create<SchemaStore>()(
           }
           return { boards, activeBoardId, boardFiles }
         })
-        if (filePersistence && file) void deleteBoardFile(file)
+        if (mode === 'supabase') {
+          void deleteBoardFromSupabase(boardId).catch(() => {
+            set({
+              syncError:
+                'Unable to save changes. Your changes have not been synchronized.',
+            })
+          })
+        } else if (mode === 'file' && file) {
+          void deleteBoardFile(file)
+        }
       },
 
       setActiveBoard: (boardId) => set({ activeBoardId: boardId }),
@@ -165,22 +253,52 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.addNode(b, name, parentId, position),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        schedulePersist(get, set, activeBoardId)
       },
 
       updateNode: (nodeId, patch) => {
-        const { activeBoardId } = get()
+        const { activeBoardId, persistenceMode } = get()
         if (!activeBoardId) return
-        set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
-            schema.updateNode(b, nodeId, patch),
-          ),
-        }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+
+        const apply = (screenshots?: string[]) => {
+          set((state) => ({
+            boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+              schema.updateNode(b, nodeId, {
+                ...patch,
+                ...(screenshots ? { screenshots } : {}),
+              }),
+            ),
+          }))
+          schedulePersist(get, set, activeBoardId)
+        }
+
+        if (patch.screenshots && persistenceMode === 'supabase') {
+          const board = get().boards.find((b) => b.id === activeBoardId)
+          const node = board?.nodes.find((n) => n.id === nodeId)
+          if (!node) return
+          void (async () => {
+            set({ syncStatus: 'saving', syncError: null })
+            try {
+              const urls = await syncNodeScreenshots(
+                activeBoardId,
+                nodeId,
+                node.screenshots,
+                patch.screenshots!,
+              )
+              apply(urls)
+              set({ syncStatus: 'saved' })
+            } catch {
+              set({
+                syncStatus: 'error',
+                syncError:
+                  'Unable to save evidence. Your changes have not been synchronized.',
+              })
+            }
+          })()
+          return
+        }
+
+        apply()
       },
 
       updateNodePosition: (nodeId, x, y) => {
@@ -191,35 +309,25 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.moveNode(b, nodeId, x, y),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        schedulePersist(get, set, activeBoardId)
       },
 
       addScreenshots: (nodeId, screenshots) => {
-        const { activeBoardId } = get()
-        if (!activeBoardId) return
-        set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
-            schema.addScreenshots(b, nodeId, screenshots),
-          ),
-        }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        const board = get().boards.find((b) => b.id === get().activeBoardId)
+        const node = board?.nodes.find((n) => n.id === nodeId)
+        if (!node) return
+        get().updateNode(nodeId, {
+          screenshots: [...node.screenshots, ...screenshots],
+        })
       },
 
       removeScreenshotAt: (nodeId, index) => {
-        const { activeBoardId } = get()
-        if (!activeBoardId) return
-        set((state) => ({
-          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
-            schema.removeScreenshotAt(b, nodeId, index),
-          ),
-        }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        const board = get().boards.find((b) => b.id === get().activeBoardId)
+        const node = board?.nodes.find((n) => n.id === nodeId)
+        if (!node) return
+        get().updateNode(nodeId, {
+          screenshots: node.screenshots.filter((_, i) => i !== index),
+        })
       },
 
       addConnection: (source, target) => {
@@ -230,9 +338,7 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.addConnection(b, source, target),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        schedulePersist(get, set, activeBoardId)
       },
 
       removeConnection: (connectionId) => {
@@ -243,9 +349,7 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.removeConnection(b, connectionId),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        schedulePersist(get, set, activeBoardId)
       },
 
       setBoardColor: (boardId, color) => {
@@ -254,9 +358,7 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.setBoardColor(b, color),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === boardId)
-        if (board) schedulePersistBoard(board, boardFiles[boardId], filePersistence)
+        schedulePersist(get, set, boardId)
       },
 
       deleteNode: (nodeId) => {
@@ -267,25 +369,39 @@ export const useSchemaStore = create<SchemaStore>()(
             schema.deleteNode(b, nodeId),
           ),
         }))
-        const { boards, boardFiles, filePersistence } = get()
-        const board = boards.find((b) => b.id === activeBoardId)
-        if (board) schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        schedulePersist(get, set, activeBoardId)
       },
 
       importBoard: (rawBoard) => {
         const board = schema.normalizeImportedBoard(rawBoard)
         const file = uniqueFilename(board.name, get().boardFiles)
-        set((state) => ({
-          boards: [...state.boards, board],
-          activeBoardId: board.id,
-          boardFiles: { ...state.boardFiles, [board.id]: file },
-        }))
-        if (get().filePersistence) void createBoardFile(board, file)
+        const mode = get().persistenceMode
+        void (async () => {
+          set({ syncStatus: 'saving', syncError: null })
+          try {
+            if (mode === 'supabase') {
+              await upsertFullBoardToSupabase(board)
+            } else if (mode === 'file') {
+              await createBoardFile(board, file)
+            }
+            set((state) => ({
+              boards: [...state.boards.filter((b) => b.id !== board.id), board],
+              activeBoardId: board.id,
+              boardFiles: { ...state.boardFiles, [board.id]: file },
+              syncStatus: 'saved',
+            }))
+          } catch {
+            set({
+              syncStatus: 'error',
+              syncError: 'Import failed — board was not saved to the server.',
+            })
+          }
+        })()
       },
 
       replaceActiveBoard: (rawBoard) => {
         const normalized = schema.normalizeImportedBoard(rawBoard)
-        const { activeBoardId } = get()
+        const { activeBoardId, persistenceMode } = get()
         if (!activeBoardId) {
           get().importBoard(normalized)
           return
@@ -294,29 +410,38 @@ export const useSchemaStore = create<SchemaStore>()(
         set((state) => ({
           boards: schema.updateBoardInList(state.boards, activeBoardId, () => board),
         }))
-        const { boardFiles, filePersistence } = get()
-        schedulePersistBoard(board, boardFiles[activeBoardId], filePersistence)
+        void (async () => {
+          set({ syncStatus: 'saving', syncError: null })
+          try {
+            if (persistenceMode === 'supabase') {
+              await upsertFullBoardToSupabase(board)
+            } else if (persistenceMode === 'file') {
+              const file = get().boardFiles[activeBoardId]
+              if (file) await saveBoardToFile(board, file)
+            }
+            set({ syncStatus: 'saved' })
+          } catch {
+            set({
+              syncStatus: 'error',
+              syncError: 'Import failed — board was not saved to the server.',
+            })
+          }
+        })()
       },
     }),
     {
-      name: 'schema-mapper-v3',
+      name: 'schema-mapper-ui-v1',
       partialize: (state) => ({
-        boards: state.boards,
         activeBoardId: state.activeBoardId,
-        boardFiles: state.boardFiles,
       }),
-      merge: (persisted, current) => {
-        const p = persisted as Partial<AppData> | undefined
-        return {
-          ...current,
-          ...p,
-          boards: (p?.boards?.length ? p.boards : current.boards).map((b) =>
-            schema.normalizeImportedBoard(b),
-          ),
-          boardFiles: p?.boardFiles ?? current.boardFiles,
-          hydrated: false,
-        }
-      },
+      merge: (persisted, current) => ({
+        ...current,
+        activeBoardId:
+          (persisted as { activeBoardId?: string | null })?.activeBoardId ??
+          current.activeBoardId,
+        boards: [],
+        hydrated: false,
+      }),
     },
   ),
 )
