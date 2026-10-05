@@ -172,6 +172,7 @@ export function Canvas() {
         maxZoom={2}
         nodesDeletable={false}
         edgesFocusable
+        deleteKeyCode={['Backspace', 'Delete']}
         proOptions={{ hideAttribution: true }}
       >
         <Background
