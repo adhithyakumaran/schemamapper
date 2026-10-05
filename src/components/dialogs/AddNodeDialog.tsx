@@ -20,12 +20,10 @@ function AddNodeDialogInner({ parentId }: { parentId: string | null }) {
     >
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
-            Node name
-          </label>
+          <label className="themed-label">Node name</label>
           <input
             autoFocus
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            className="themed-input w-full rounded-md px-3 py-2 text-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -33,14 +31,14 @@ function AddNodeDialogInner({ parentId }: { parentId: string | null }) {
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+            className="btn-secondary"
             onClick={() => setDialog(null)}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded-md bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+            className="btn-primary rounded-md px-3 py-1.5 text-sm"
           >
             Add
           </button>

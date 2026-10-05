@@ -10,21 +10,21 @@ import { DeleteNodeDialog } from './components/dialogs/DeleteNodeDialog'
 import { EditNodeDialog } from './components/dialogs/EditNodeDialog'
 import { NoteDialog } from './components/dialogs/NoteDialog'
 import { SyncStatusBar } from './components/SyncStatusBar'
+import { ThemeToggle } from './components/ThemeToggle'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
   const setDialog = useSchemaStore((s) => s.setDialog)
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm">
-      <h1 className="text-sm font-semibold tracking-tight text-slate-900">
-        Schema Mapper
-      </h1>
+    <header className="app-header flex h-12 shrink-0 items-center justify-between border-b px-4 shadow-sm">
+      <h1 className="text-sm font-semibold tracking-tight">Schema Mapper</h1>
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <BoardColorPicker />
         <button
           type="button"
-          className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+          className="btn-primary rounded-md px-3 py-1.5 text-sm font-medium"
           onClick={() => setDialog({ type: 'board', mode: 'create' })}
         >
           + New Board
@@ -49,7 +49,7 @@ export default function App() {
 
   if (!hydrated) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center text-sm themed-muted">
         Loading schema…
       </div>
     )

@@ -8,14 +8,14 @@ export function BoardSidebar() {
   const deleteBoard = useSchemaStore((s) => s.deleteBoard)
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-3 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <aside className="app-sidebar flex w-56 shrink-0 flex-col border-r">
+      <div className="border-b px-3 py-3" style={{ borderColor: 'var(--border)' }}>
+        <p className="text-xs font-semibold uppercase tracking-wide themed-muted">
           Boards
         </p>
         <button
           type="button"
-          className="mt-2 w-full rounded-md border border-dashed border-slate-300 px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+          className="sidebar-new-board mt-2 w-full rounded-md border border-dashed px-2 py-1.5 text-left text-sm"
           onClick={() => setDialog({ type: 'board', mode: 'create' })}
         >
           + New Board
@@ -28,14 +28,12 @@ export function BoardSidebar() {
             <li key={board.id} className="mb-1">
               <div
                 className={`group flex items-center gap-1 rounded-md border px-2 py-1.5 ${
-                  active
-                    ? 'border-slate-300 bg-slate-100 shadow-sm'
-                    : 'border-transparent hover:bg-slate-50'
+                  active ? 'sidebar-board-item active shadow-sm' : 'sidebar-board-item'
                 }`}
               >
                 <button
                   type="button"
-                  className="flex-1 truncate text-left text-sm text-slate-800"
+                  className="flex-1 truncate text-left text-sm"
                   onClick={() => setActiveBoard(board.id)}
                 >
                   {board.name}
@@ -43,7 +41,7 @@ export function BoardSidebar() {
                 <button
                   type="button"
                   title="Rename"
-                  className="hidden rounded px-1 text-xs text-slate-500 group-hover:inline hover:bg-white"
+                  className="sidebar-board-action hidden rounded px-1 text-xs group-hover:inline"
                   onClick={() =>
                     setDialog({
                       type: 'board',
@@ -57,7 +55,7 @@ export function BoardSidebar() {
                 <button
                   type="button"
                   title="Delete board"
-                  className="hidden rounded px-1 text-xs text-red-500 group-hover:inline hover:bg-white"
+                  className="sidebar-board-action hidden rounded px-1 text-xs text-red-500 group-hover:inline"
                   onClick={() => {
                     if (
                       confirm(

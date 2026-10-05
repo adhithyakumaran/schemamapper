@@ -19,7 +19,7 @@ function NoteDialogInner({ node }: { node: SchemaNode }) {
       <form onSubmit={submit} className="space-y-4">
         <textarea
           autoFocus
-          className="w-full min-h-[120px] rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+          className="themed-input w-full min-h-[120px] rounded-md px-3 py-2 text-sm"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Captured from Katalon Studio 11.5 screenshot."
@@ -27,14 +27,14 @@ function NoteDialogInner({ node }: { node: SchemaNode }) {
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+            className="btn-secondary"
             onClick={() => setDialog(null)}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded-md bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+            className="btn-primary rounded-md px-3 py-1.5 text-sm"
           >
             Save
           </button>

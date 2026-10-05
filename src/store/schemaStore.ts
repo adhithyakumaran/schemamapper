@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { autoLayoutBoard, boardNeedsAutoLayout } from '../lib/autoLayout'
 import { countDescendants } from '../lib/tree'
 import { loadBoardsFromServer, type PersistenceMode } from '../services/boardLoader'
 import {
@@ -29,12 +30,14 @@ interface SchemaStore extends AppData {
   persistenceMode: PersistenceMode
   syncStatus: SyncStatus
   syncError: string | null
+  layoutFitTick: number
   dialog: DialogState
   edgeMenu: EdgeMenuState
   setDialog: (dialog: DialogState) => void
   setEdgeMenu: (menu: EdgeMenuState) => void
   hydrateFromServer: () => Promise<void>
   reloadFromServer: () => Promise<void>
+  autoLayoutActiveBoard: () => void
   createBoard: (name: string) => void
   renameBoard: (boardId: string, name: string) => void
   deleteBoard: (boardId: string) => void
@@ -129,6 +132,7 @@ export const useSchemaStore = create<SchemaStore>()(
       persistenceMode: 'offline',
       syncStatus: 'idle',
       syncError: null,
+      layoutFitTick: 0,
       dialog: null,
       edgeMenu: null,
 
@@ -137,7 +141,17 @@ export const useSchemaStore = create<SchemaStore>()(
 
       hydrateFromServer: async () => {
         try {
-          const { boards, boardFiles, mode } = await loadBoardsFromServer()
+          let { boards, boardFiles, mode } = await loadBoardsFromServer()
+          let layoutFitTick = 0
+          boards = boards.map((b) => {
+            if (!boardNeedsAutoLayout(b)) return b
+            const laid = autoLayoutBoard(b)
+            layoutFitTick = Date.now()
+            if (mode === 'supabase') {
+              void upsertFullBoardToSupabase(laid).catch(() => {})
+            }
+            return laid
+          })
           const active =
             get().activeBoardId &&
             boards.some((b) => b.id === get().activeBoardId)
@@ -150,6 +164,7 @@ export const useSchemaStore = create<SchemaStore>()(
             persistenceMode: mode,
             hydrated: true,
             syncError: null,
+            layoutFitTick,
           })
         } catch {
           set({
@@ -244,6 +259,18 @@ export const useSchemaStore = create<SchemaStore>()(
       },
 
       setActiveBoard: (boardId) => set({ activeBoardId: boardId }),
+
+      autoLayoutActiveBoard: () => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            autoLayoutBoard(b),
+          ),
+          layoutFitTick: Date.now(),
+        }))
+        schedulePersist(get, set, activeBoardId)
+      },
 
       addNode: (name, parentId, position) => {
         const { activeBoardId } = get()

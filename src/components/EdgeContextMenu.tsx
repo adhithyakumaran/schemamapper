@@ -23,12 +23,12 @@ export function EdgeContextMenu() {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[180px] rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+      className="themed-menu fixed z-50 min-w-[180px] rounded-md border py-1 shadow-lg"
       style={{ left: menu.x, top: menu.y }}
     >
       <button
         type="button"
-        className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+        className="menu-item-danger themed-menu-item block w-full px-3 py-2 text-left text-sm"
         onClick={() => {
           removeConnection(menu.connectionId)
           setEdgeMenu(null)

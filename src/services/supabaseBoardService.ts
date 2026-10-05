@@ -145,8 +145,6 @@ export async function syncNodeScreenshots(
   next: string[],
 ): Promise<string[]> {
   const resolved: string[] = []
-  const prevSet = new Set(previous)
-
   for (const item of next) {
     if (item.startsWith('data:')) {
       resolved.push(await uploadScreenshot(boardId, nodeId, item))
@@ -156,7 +154,7 @@ export async function syncNodeScreenshots(
   }
 
   for (const old of previous) {
-    if (!resolved.includes(old) && prevSet.has(old)) {
+    if (!resolved.includes(old)) {
       await deleteEvidenceUrl(old)
     }
   }

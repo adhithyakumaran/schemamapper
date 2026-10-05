@@ -1,6 +1,46 @@
 @import 'tailwindcss';
 @import '@xyflow/react/dist/style.css';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-secondary: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --accent: #334155;
+  --accent-fg: #ffffff;
+  --canvas-dot: rgba(71, 85, 105, 0.38);
+  --node-bg: #ffffff;
+  --node-border: #94a3b8;
+  --node-border-selected: #0f172a;
+  --node-text: #0f172a;
+  --hierarchy-edge: #64748b;
+  --relationship-edge: #4f46e5;
+  --node-min-w: 150px;
+  --node-max-w: 240px;
+}
+
+.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-secondary: #334155;
+  --border: #475569;
+  --text: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --accent: #e2e8f0;
+  --accent-fg: #0f172a;
+  --canvas-dot: rgba(148, 163, 184, 0.35);
+  --node-bg: #1e293b;
+  --node-border: #64748b;
+  --node-border-selected: #e2e8f0;
+  --node-text: #f8fafc;
+  --hierarchy-edge: #94a3b8;
+  --relationship-edge: #818cf8;
+}
+
 html,
 body,
 #root {
@@ -15,20 +55,79 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
-  color: #1e293b;
-  background: #f8fafc;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.app-header {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.app-sidebar {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.app-toolbar {
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  border-color: var(--border);
 }
 
 .toolbar-btn {
-  @apply rounded px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40;
+  @apply rounded px-2.5 py-1 text-xs font-medium disabled:opacity-40;
+  color: var(--text);
+}
+
+.toolbar-btn:hover {
+  background: var(--surface-secondary);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.themed-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.themed-input:focus {
+  outline: none;
+  border-color: var(--text-secondary);
+}
+
+.themed-modal {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.themed-menu {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.themed-menu-item:hover {
+  background: var(--surface-secondary);
 }
 
 .schema-handle {
-  @apply !h-3 !w-3 !border-2 !border-white transition-opacity;
+  @apply !h-3 !w-3 !border-2 transition-opacity;
+  border-color: var(--node-bg) !important;
 }
 
 .rel-handle {
-  @apply !bg-indigo-400 opacity-0;
+  @apply opacity-0;
+  background: var(--relationship-edge) !important;
 }
 
 .rel-handle-source {
@@ -36,7 +135,7 @@ body {
 }
 
 .rel-handle-target {
-  @apply !-left-1 !bg-violet-400;
+  @apply !-left-1;
 }
 
 .schema-node:hover .rel-handle,
@@ -45,34 +144,205 @@ body {
   @apply opacity-100;
 }
 
-.react-flow__node.selected .rel-handle-source {
-  @apply !bg-indigo-600;
+.schema-node {
+  min-width: var(--node-min-w);
+  max-width: var(--node-max-w);
+  background: var(--node-bg);
+  border-color: var(--node-border);
+  color: var(--node-text);
 }
 
-.react-flow__edge.hierarchy-edge .react-flow__edge-path {
-  stroke: #64748b !important;
-  stroke-width: 1.5px !important;
+.schema-node.selected {
+  border-color: var(--node-border-selected);
 }
 
-.react-flow__edge.relationship-edge .react-flow__edge-path {
-  stroke: #4f46e5 !important;
-  stroke-width: 2px !important;
-  stroke-dasharray: 8 5 !important;
+.schema-node-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.schema-node-icon {
+  @apply rounded px-1 text-sm leading-none;
+}
+
+.schema-node-icon:hover {
+  background: var(--surface-secondary);
+}
+
+.schema-node-evidence {
+  @apply inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-medium;
+  background: var(--surface-secondary);
+  color: var(--text);
+}
+
+.schema-node-evidence:hover {
+  filter: brightness(1.05);
+}
+
+.schema-node-add-child {
+  border-color: var(--node-border);
+  background: var(--node-bg);
+  color: var(--node-text);
+}
+
+.schema-node-add-child:hover {
+  background: var(--surface-secondary);
 }
 
 .hierarchy-handle {
   @apply !opacity-0 !w-0 !h-0 !min-w-0 !min-h-0 !border-0;
 }
 
-.schema-node-icon {
-  @apply rounded px-1 text-sm leading-none hover:bg-slate-100;
+.react-flow__edge.hierarchy-edge .react-flow__edge-path {
+  stroke: var(--hierarchy-edge) !important;
+  stroke-width: 1.5px !important;
 }
 
-.schema-node-evidence {
-  @apply inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200;
+.react-flow__edge.relationship-edge .react-flow__edge-path {
+  stroke: var(--relationship-edge) !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: 8 5 !important;
 }
 
 .react-flow__edge.relationship-edge.selected .react-flow__edge-path {
-  stroke: #4f46e5 !important;
-  stroke-width: 2.5 !important;
+  stroke-width: 2.5px !important;
+}
+
+.react-flow__controls {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+.react-flow__controls-button {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  fill: var(--text) !important;
+}
+
+.themed-label {
+  @apply mb-1 block text-xs font-medium;
+  color: var(--text-secondary);
+}
+
+.themed-muted {
+  color: var(--text-secondary);
+}
+
+.btn-secondary {
+  @apply rounded-md px-3 py-1.5 text-sm;
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-secondary);
+}
+
+.btn-danger {
+  @apply rounded-md px-3 py-1.5 text-sm text-white;
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  filter: brightness(1.08);
+}
+
+.sidebar-board-item {
+  border-color: transparent;
+  color: var(--text);
+}
+
+.sidebar-board-item:hover {
+  background: var(--surface-secondary);
+}
+
+.sidebar-board-item.active {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+}
+
+.sidebar-board-action {
+  color: var(--text-secondary);
+}
+
+.sidebar-board-action:hover {
+  background: var(--surface);
+}
+
+.sidebar-new-board {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.sidebar-new-board:hover {
+  background: var(--surface-secondary);
+}
+
+.status-offline {
+  border-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+  color: var(--text);
+}
+
+.dark .status-offline {
+  border-color: #b45309;
+  background: color-mix(in srgb, #b45309 22%, var(--surface));
+}
+
+.status-error {
+  border-color: #f87171;
+  background: color-mix(in srgb, #ef4444 12%, var(--surface));
+  color: var(--text);
+}
+
+.dark .status-error {
+  border-color: #b91c1c;
+  background: color-mix(in srgb, #b91c1c 25%, var(--surface));
+}
+
+.status-saving {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.evidence-grid {
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+.evidence-thumb {
+  border-color: var(--border);
+}
+
+.evidence-delete {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: #dc2626;
+}
+
+.menu-item-danger {
+  color: #dc2626;
+}
+
+.menu-item-danger:hover {
+  background: color-mix(in srgb, #ef4444 12%, var(--surface));
+}
+
+.schema-node.selected {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.board-color-label {
+  color: var(--text-secondary);
+}
+
+.board-color-swatch {
+  border-color: var(--border);
+}
+
+.board-color-swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text-secondary);
 }

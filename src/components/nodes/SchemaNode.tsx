@@ -26,10 +26,8 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`schema-node group relative min-w-[180px] max-w-[240px] rounded-lg border bg-white px-3 py-2.5 shadow-md transition-shadow ${
-        selected
-          ? 'border-slate-800 ring-2 ring-slate-400/60 shadow-lg'
-          : 'border-slate-400/80 hover:border-slate-500 hover:shadow-lg'
+      className={`schema-node group relative rounded-lg border px-3 py-2.5 shadow-md transition-shadow ${
+        selected ? 'selected ring-2 ring-[color-mix(in_srgb,var(--text)_25%,transparent)]' : 'hover:shadow-lg'
       }`}
       onContextMenu={openMenu}
     >
@@ -55,9 +53,7 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
         title="Drag to link relationship"
       />
 
-      <div className="font-semibold text-sm text-slate-900 pr-2 break-words leading-snug">
-        {nodeData.label}
-      </div>
+      <div className="schema-node-title pr-2">{nodeData.label}</div>
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -91,7 +87,7 @@ function SchemaNodeComponent({ data, selected }: NodeProps) {
         </div>
         <button
           type="button"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-400 bg-white text-slate-800 text-sm font-medium leading-none shadow-sm hover:bg-slate-50"
+          className="schema-node-add-child flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-sm font-medium leading-none shadow-sm"
           title="Add child (hierarchy)"
           onClick={(e) => {
             e.stopPropagation()

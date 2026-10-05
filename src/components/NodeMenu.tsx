@@ -29,10 +29,12 @@ export function NodeMenu() {
 
   const { nodeId, x, y } = dialog
 
-  const item = (label: string, onClick: () => void) => (
+  const item = (label: string, onClick: () => void, danger = false) => (
     <button
       type="button"
-      className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+      className={`themed-menu-item block w-full px-3 py-2 text-left text-sm ${
+        danger ? 'menu-item-danger' : ''
+      }`}
       onClick={() => {
         setDialog(null)
         onClick()
@@ -45,14 +47,14 @@ export function NodeMenu() {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[180px] overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+      className="themed-menu fixed z-50 min-w-[180px] overflow-hidden rounded-md border py-1 shadow-lg"
       style={{ left: x, top: y }}
     >
       {item('Edit', () => setDialog({ type: 'edit', nodeId }))}
       {item('Add Child', () => setDialog({ type: 'addChild', parentId: nodeId }))}
       {item('Add Note', () => setDialog({ type: 'note', nodeId }))}
       {item('Edit / Evidence', () => setDialog({ type: 'edit', nodeId }))}
-      {item('Delete', () => setDialog({ type: 'deleteNode', nodeId }))}
+      {item('Delete', () => setDialog({ type: 'deleteNode', nodeId }), true)}
     </div>
   )
 }

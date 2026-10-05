@@ -7,7 +7,7 @@ export function SyncStatusBar() {
 
   if (persistenceMode === 'offline') {
     return (
-      <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-900">
+      <div className="status-offline border-b px-4 py-1.5 text-xs">
         Supabase is not configured. Changes are not synchronized to production.
         Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel.
       </div>
@@ -16,15 +16,13 @@ export function SyncStatusBar() {
 
   if (syncError) {
     return (
-      <div className="border-b border-red-200 bg-red-50 px-4 py-1.5 text-xs text-red-800">
-        {syncError}
-      </div>
+      <div className="status-error border-b px-4 py-1.5 text-xs">{syncError}</div>
     )
   }
 
   if (syncStatus === 'saving') {
     return (
-      <div className="border-b border-slate-200 bg-slate-50 px-4 py-1 text-xs text-slate-600">
+      <div className="status-saving border-b px-4 py-1 text-xs">
         Saving to server…
       </div>
     )

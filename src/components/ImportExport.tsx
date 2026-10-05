@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { downloadBoardJson, downloadBoardPdf, downloadBoardPng } from '../services/boardExport'
 import { useSchemaStore } from '../store/schemaStore'
 import type { Board } from '../types/schema'
@@ -10,8 +10,20 @@ export function ImportExportButtons() {
   const importBoard = useSchemaStore((s) => s.importBoard)
   const replaceActiveBoard = useSchemaStore((s) => s.replaceActiveBoard)
   const jsonInputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    if (!exportOpen) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setExportOpen(false)
+      }
+    }
+    window.addEventListener('mousedown', onPointerDown)
+    return () => window.removeEventListener('mousedown', onPointerDown)
+  }, [exportOpen])
 
   const onImportJson = async (file: File) => {
     try {
@@ -42,7 +54,7 @@ export function ImportExportButtons() {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <button
           type="button"
           className="toolbar-btn"
@@ -52,24 +64,24 @@ export function ImportExportButtons() {
           Export ▾
         </button>
         {exportOpen && (
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+          <div className="themed-menu absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-md border py-1 shadow-lg">
             <button
               type="button"
-              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              className="themed-menu-item block w-full px-3 py-1.5 text-left text-xs"
               onClick={() => runExport('json')}
             >
               JSON
             </button>
             <button
               type="button"
-              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              className="themed-menu-item block w-full px-3 py-1.5 text-left text-xs"
               onClick={() => runExport('pdf')}
             >
               PDF
             </button>
             <button
               type="button"
-              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-slate-50"
+              className="themed-menu-item block w-full px-3 py-1.5 text-left text-xs"
               onClick={() => runExport('png')}
             >
               PNG

@@ -9,12 +9,20 @@ interface CanvasToolbarProps {
 
 export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
   const reloadFromServer = useSchemaStore((s) => s.reloadFromServer)
+  const autoLayoutActiveBoard = useSchemaStore((s) => s.autoLayoutActiveBoard)
   const persistenceMode = useSchemaStore((s) => s.persistenceMode)
 
   return (
-    <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white/95 p-1 shadow-sm">
+    <div className="app-toolbar absolute left-3 top-3 z-10 flex flex-wrap items-center gap-1 rounded-md border p-1 shadow-sm">
       <button type="button" className="toolbar-btn" onClick={onAddNode}>
         + Node
+      </button>
+      <button
+        type="button"
+        className="toolbar-btn"
+        onClick={() => autoLayoutActiveBoard()}
+      >
+        Auto Layout
       </button>
       <button
         type="button"

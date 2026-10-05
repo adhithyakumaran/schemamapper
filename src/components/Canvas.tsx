@@ -11,10 +11,12 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { SchemaNode, type SchemaNodeData } from './nodes/SchemaNode'
-import { CanvasToolbar } from './CanvasToolbar'
-import { useSchemaStore } from '../store/schemaStore'
+import { resolveBoardCanvasColor } from '../lib/boardCanvasColor'
 import { syncEdgesFromParents } from '../lib/tree'
+import { useThemeStore } from '../store/themeStore'
+import { useSchemaStore } from '../store/schemaStore'
+import { CanvasToolbar } from './CanvasToolbar'
+import { SchemaNode, type SchemaNodeData } from './nodes/SchemaNode'
 
 const nodeTypes = { schema: SchemaNode }
 
@@ -26,11 +28,13 @@ export function Canvas() {
   const board = useSchemaStore((s) =>
     s.boards.find((b) => b.id === s.activeBoardId) ?? null,
   )
+  const layoutFitTick = useSchemaStore((s) => s.layoutFitTick)
   const updateNodePosition = useSchemaStore((s) => s.updateNodePosition)
   const setDialog = useSchemaStore((s) => s.setDialog)
   const addConnection = useSchemaStore((s) => s.addConnection)
   const removeConnection = useSchemaStore((s) => s.removeConnection)
   const setEdgeMenu = useSchemaStore((s) => s.setEdgeMenu)
+  const theme = useThemeStore((s) => s.theme)
 
   const [rf, setRf] = useState<ReactFlowInstance | null>(null)
 
@@ -62,7 +66,6 @@ export function Canvas() {
       selectable: true,
       focusable: false,
       className: 'hierarchy-edge',
-      style: { stroke: '#64748b', strokeWidth: 1.5 },
     }))
     const relations = (board.connections ?? []).map((c) => ({
       id: c.id,
@@ -74,11 +77,6 @@ export function Canvas() {
       deletable: true,
       selectable: true,
       className: 'relationship-edge',
-      style: {
-        stroke: '#6366f1',
-        strokeWidth: 2,
-        strokeDasharray: '6 4',
-      },
     }))
     return [...hierarchy, ...relations]
   }, [board])
@@ -130,21 +128,29 @@ export function Canvas() {
   useEffect(() => {
     if (rf && board && board.nodes.length > 0) {
       const t = window.setTimeout(() => {
-        rf.fitView({ padding: 0.2, duration: 200 })
+        rf.fitView({ padding: 0.18, duration: 280, maxZoom: 1.15 })
       }, 50)
       return () => window.clearTimeout(t)
     }
   }, [board?.id, rf])
 
+  useEffect(() => {
+    if (!rf || !layoutFitTick) return
+    const t = window.setTimeout(() => {
+      rf.fitView({ padding: 0.18, duration: 320, maxZoom: 1.15 })
+    }, 40)
+    return () => window.clearTimeout(t)
+  }, [layoutFitTick, rf])
+
   if (!board) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-slate-500">
+      <div className="flex flex-1 items-center justify-center text-sm text-[var(--text-secondary)]">
         Create a board to get started.
       </div>
     )
   }
 
-  const bgColor = board.color ?? '#F8FAFC'
+  const bgColor = resolveBoardCanvasColor(board.color ?? '#F8FAFC', theme === 'dark')
 
   return (
     <div className="relative flex-1" style={{ backgroundColor: bgColor }}>
@@ -153,6 +159,7 @@ export function Canvas() {
         onAddNode={() => setDialog({ type: 'addRoot' })}
       />
       <ReactFlow
+        colorMode={theme}
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={nodeTypes}
@@ -179,7 +186,7 @@ export function Canvas() {
           setDialog({ type: 'edit', nodeId: node.id })
         }
         fitView
-        minZoom={0.2}
+        minZoom={0.15}
         maxZoom={2}
         edgesFocusable
         deleteKeyCode={['Backspace', 'Delete']}
@@ -191,9 +198,9 @@ export function Canvas() {
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={18}
-          size={2}
-          color="rgba(71, 85, 105, 0.38)"
+          gap={16}
+          size={2.2}
+          color="var(--canvas-dot)"
         />
         <Controls showInteractive={false} className="!shadow-sm" />
       </ReactFlow>

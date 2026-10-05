@@ -10,7 +10,7 @@ export function BoardColorPicker() {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+      <span className="board-color-label text-[10px] font-medium uppercase tracking-wide">
         Board color
       </span>
       {BOARD_COLOR_PRESETS.map((preset) => (
@@ -18,10 +18,8 @@ export function BoardColorPicker() {
           key={preset.value}
           type="button"
           title={preset.label}
-          className={`h-5 w-5 rounded-full border ${
-            board.color === preset.value
-              ? 'border-slate-700 ring-1 ring-slate-400'
-              : 'border-slate-300'
+          className={`board-color-swatch h-5 w-5 rounded-full border ${
+            board.color === preset.value ? 'active' : ''
           }`}
           style={{ backgroundColor: preset.value }}
           onClick={() => setBoardColor(board.id, preset.value)}
@@ -30,7 +28,11 @@ export function BoardColorPicker() {
       <input
         type="color"
         title="Custom board color"
-        className="h-6 w-8 cursor-pointer rounded border border-slate-300 bg-white p-0"
+        className="h-6 w-8 cursor-pointer rounded border p-0"
+        style={{
+          borderColor: 'var(--border)',
+          background: 'var(--surface)',
+        }}
         value={board.color}
         onChange={(e) => setBoardColor(board.id, e.target.value)}
       />

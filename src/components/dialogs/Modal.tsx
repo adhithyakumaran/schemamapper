@@ -23,18 +23,18 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className={`w-full ${widthClass} rounded-lg border border-slate-200 bg-white shadow-xl`}
+        className={`themed-modal w-full ${widthClass} rounded-lg border shadow-xl`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="border-b border-slate-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+        <div className="border-b px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+          <h2 className="text-sm font-semibold">{title}</h2>
         </div>
         <div className="p-4">{children}</div>
       </div>

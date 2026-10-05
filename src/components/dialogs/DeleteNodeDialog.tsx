@@ -18,18 +18,18 @@ export function DeleteNodeDialog() {
 
   return (
     <Modal title="Delete node" onClose={() => setDialog(null)}>
-      <p className="mb-4 text-sm text-slate-600">{message}</p>
+      <p className="mb-4 text-sm themed-muted">{message}</p>
       <div className="flex justify-end gap-2">
         <button
           type="button"
-          className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+          className="btn-secondary"
           onClick={() => setDialog(null)}
         >
           Cancel
         </button>
         <button
           type="button"
-          className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-500"
+          className="btn-danger"
           onClick={() => {
             deleteNode(node.id)
             setDialog(null)
