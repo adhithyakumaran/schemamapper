@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ensureDefaultWorkspace } from '../lib/ensureDefaultDocument'
-import { findFirstDocumentInTree } from '../lib/workspaceDisplay'
 import { boardUiForBoard, DEFAULT_WORKSPACE_UI } from './stableDefaults'
 import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
 import { createId } from '../lib/ids'
@@ -200,19 +199,6 @@ function openDocPatch(
         : ({ kind: 'pdf', documentId } as WorkspaceSelection),
     activeBoardId: null,
   }
-}
-
-function documentSelectionFromTree(
-  tree: WorkspaceTreeNode[],
-  docs: Record<string, WorkspaceDocument>,
-): WorkspaceSelection {
-  const first = findFirstDocumentInTree(tree)
-  if (first && docs[first.documentId]) {
-    return first.kind === 'markdown'
-      ? { kind: 'markdown', documentId: first.documentId }
-      : { kind: 'pdf', documentId: first.documentId }
-  }
-  return null
 }
 
 function applyLayout(board: Board, layout: BoardLayoutType): Board {

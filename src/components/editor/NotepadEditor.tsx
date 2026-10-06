@@ -1,11 +1,9 @@
+import '@blocknote/ariakit/style.css'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/react/style.css'
+import { BlockNoteView } from '@blocknote/ariakit'
 import type { BlockNoteEditor } from '@blocknote/core'
-import {
-  BlockNoteDefaultUI,
-  BlockNoteViewRaw,
-  useCreateBlockNote,
-} from '@blocknote/react'
+import { useCreateBlockNote } from '@blocknote/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   blocksForDocument,
@@ -246,13 +244,11 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
               {doc.name.replace(/\.md$/i, '')}
             </h1>
           )}
-          <BlockNoteViewRaw
+          <BlockNoteView
             editor={editor}
             theme={dark ? 'dark' : 'light'}
             onChange={() => scheduleSave(editor)}
-          >
-            <BlockNoteDefaultUI />
-          </BlockNoteViewRaw>
+          />
         </div>
       </div>
     </div>
