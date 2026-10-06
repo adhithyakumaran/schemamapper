@@ -13,6 +13,7 @@ import { NewWorkspaceDialog } from './components/dialogs/NewWorkspaceDialog'
 import { NoteDialog } from './components/dialogs/NoteDialog'
 import { SyncStatusBar } from './components/SyncStatusBar'
 import { ThemeToggle } from './components/ThemeToggle'
+import { EMPTY_WORKSPACE_DOCUMENTS } from './store/stableDefaults'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
@@ -25,12 +26,16 @@ function AppHeader() {
   )
   const md = useSchemaStore((s) =>
     selection?.kind === 'markdown' && selection.documentId
-      ? (s.workspaceDocuments ?? {})[selection.documentId]
+      ? (s.workspaceDocuments ?? EMPTY_WORKSPACE_DOCUMENTS)[
+          selection.documentId
+        ]
       : null,
   )
   const pdf = useSchemaStore((s) =>
     selection?.kind === 'pdf' && selection.documentId
-      ? (s.workspaceDocuments ?? {})[selection.documentId]
+      ? (s.workspaceDocuments ?? EMPTY_WORKSPACE_DOCUMENTS)[
+          selection.documentId
+        ]
       : null,
   )
 

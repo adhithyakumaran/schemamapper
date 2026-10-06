@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { boardUiForBoard } from './stableDefaults'
 import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
 import { createId } from '../lib/ids'
 import { countDescendants } from '../lib/tree'
@@ -175,13 +176,10 @@ function boardUi(
   state: { boardUiState?: Record<string, import('../types/schema').BoardUiState> },
   boardId: string,
 ) {
-  return (
-    state.boardUiState?.[boardId] ?? {
-      collapsedNodeIds: [],
-      selectedNodeId: null,
-    }
-  )
+  return boardUiForBoard(state.boardUiState, boardId)
 }
+
+let hydrateInFlight: Promise<void> | null = null
 
 function schedulePersist(
   get: () => SchemaStore,
@@ -264,6 +262,9 @@ export const useSchemaStore = create<SchemaStore>()(
         }),
 
       hydrateFromServer: async () => {
+        if (get().hydrated) return
+        if (hydrateInFlight) return hydrateInFlight
+        hydrateInFlight = (async () => {
         try {
           const existing = get().boards
           let { boards, boardFiles, mode } =
@@ -325,6 +326,12 @@ export const useSchemaStore = create<SchemaStore>()(
             hydrated: true,
             syncError: null,
           })
+        }
+        })()
+        try {
+          await hydrateInFlight
+        } finally {
+          hydrateInFlight = null
         }
       },
 

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { EMPTY_WORKSPACE_DOCUMENTS } from '../store/stableDefaults'
 import { useSchemaStore } from '../store/schemaStore'
 
 export function PdfPanel({ documentId }: { documentId: string }) {
   const doc = useSchemaStore(
-    (s) => (s.workspaceDocuments ?? {})[documentId],
+    (s) => (s.workspaceDocuments ?? EMPTY_WORKSPACE_DOCUMENTS)[documentId],
   )
   const [pdf, setPdf] = useState<
     import('pdfjs-dist').PDFDocumentProxy | null

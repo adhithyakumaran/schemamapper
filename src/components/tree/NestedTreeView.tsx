@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { childrenOf } from '../../lib/hierarchyTree'
 import { nodeDisplayIcon } from '../../lib/nodePresentation'
+import { boardUiForBoard } from '../../store/stableDefaults'
 import { useSchemaStore } from '../../store/schemaStore'
 import type { Board, SchemaNode } from '../../types/schema'
 import { SchemaBoardToolbar } from '../SchemaBoardToolbar'
@@ -149,13 +150,7 @@ export function NestedTreeView({ board }: { board: Board }) {
   const toggleCollapsed = useSchemaStore((s) => s.toggleTreeNodeCollapsed)
   const setSelected = useSchemaStore((s) => s.setTreeSelectedNode)
   const moveHierarchyNode = useSchemaStore((s) => s.moveHierarchyNode)
-  const ui = useSchemaStore(
-    (s) =>
-      (s.boardUiState ?? {})[board.id] ?? {
-        collapsedNodeIds: [],
-        selectedNodeId: null,
-      },
-  )
+  const ui = useSchemaStore((s) => boardUiForBoard(s.boardUiState, board.id))
 
   const collapsedIds = useMemo(
     () => new Set(ui.collapsedNodeIds),

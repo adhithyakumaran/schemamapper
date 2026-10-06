@@ -5,6 +5,7 @@ import {
 } from '../lib/nodePresentation'
 import { isFolderExpanded } from '../lib/workspaceTree'
 import type { WorkspaceTreeNode } from '../types/workspace'
+import { EMPTY_WORKSPACE_TREE } from '../store/stableDefaults'
 import { useSchemaStore } from '../store/schemaStore'
 
 function WorkspaceItem({
@@ -181,7 +182,7 @@ function WorkspaceItem({
 }
 
 export function WorkspaceExplorer() {
-  const tree = useSchemaStore((s) => s.workspaceTree ?? [])
+  const tree = useSchemaStore((s) => s.workspaceTree ?? EMPTY_WORKSPACE_TREE)
   const moveItem = useSchemaStore((s) => s.moveWorkspaceItem)
   const setDialog = useSchemaStore((s) => s.setDialog)
   const [rootDrag, setRootDrag] = useState(false)
