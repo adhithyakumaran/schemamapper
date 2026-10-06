@@ -120,6 +120,10 @@ interface SchemaStore extends AppData {
   importMarkdownFile: (file: File) => Promise<void>
   importPdfFile: (file: File) => Promise<void>
   updateMarkdownDocument: (documentId: string, content: string) => void
+  updateDocumentEditorState: (
+    documentId: string,
+    payload: { editorContent: string; content: string },
+  ) => void
   replaceActiveBoard: (board: Board) => void
   toggleTreeNodeCollapsed: (boardId: string, nodeId: string) => void
   setTreeSelectedNode: (boardId: string, nodeId: string | null) => void
@@ -957,6 +961,24 @@ export const useSchemaStore = create<SchemaStore>()(
               [documentId]: {
                 ...doc,
                 content,
+                updatedAt: Date.now(),
+              },
+            },
+          }
+        })
+      },
+
+      updateDocumentEditorState: (documentId, payload) => {
+        set((state) => {
+          const doc = state.workspaceDocuments[documentId]
+          if (!doc || doc.type !== 'markdown') return state
+          return {
+            workspaceDocuments: {
+              ...state.workspaceDocuments,
+              [documentId]: {
+                ...doc,
+                editorContent: payload.editorContent,
+                content: payload.content,
                 updatedAt: Date.now(),
               },
             },

@@ -1,5 +1,6 @@
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/react/style.css'
+import type { BlockNoteEditor } from '@blocknote/core'
 import {
   BlockNoteDefaultUI,
   BlockNoteViewRaw,
@@ -7,11 +8,12 @@ import {
 } from '@blocknote/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  parseWorkspaceDocumentHref,
-  resolveDocumentIdByTitle,
-  workspaceDocumentHref,
-  wikiLinkPattern,
-} from '../../lib/workspaceLinks'
+  blocksForDocument,
+  markdownSnapshot,
+  serializeEditorBlocks,
+  uploadFileForNotepad,
+} from '../../lib/notepadPersistence'
+import { parseWorkspaceDocumentHref, workspaceDocumentHref } from '../../lib/workspaceLinks'
 import {
   downloadDocumentMarkdown,
   downloadDocumentPdf,
@@ -19,51 +21,93 @@ import {
 import { DEFAULT_WORKSPACE_UI } from '../../store/stableDefaults'
 import { useSchemaStore } from '../../store/schemaStore'
 import { useThemeStore } from '../../store/themeStore'
+import { InternalLinkPicker } from './InternalLinkPicker'
 
-const SAVE_DEBOUNCE_MS = 450
+const SAVE_DEBOUNCE_MS = 750
 
 export function NotepadEditor({ documentId }: { documentId: string }) {
   const doc = useSchemaStore((s) => s.workspaceDocuments[documentId])
-  const update = useSchemaStore((s) => s.updateMarkdownDocument)
+  const updateEditorState = useSchemaStore((s) => s.updateDocumentEditorState)
   const renameDocument = useSchemaStore((s) => s.renameDocument)
   const setSaveStatus = useSchemaStore((s) => s.setWorkspaceSaveStatus)
   const saveStatus = useSchemaStore(
     (s) => (s.workspaceUi ?? DEFAULT_WORKSPACE_UI).saveStatus,
   )
-  const openWorkspaceDocument = useSchemaStore(
-    (s) => s.openWorkspaceDocument,
-  )
+  const openWorkspaceDocument = useSchemaStore((s) => s.openWorkspaceDocument)
   const workspaceDocuments = useSchemaStore((s) => s.workspaceDocuments)
   const workspaceTree = useSchemaStore((s) => s.workspaceTree)
   const dark = useThemeStore((s) => s.theme === 'dark')
   const [titleEditing, setTitleEditing] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
-  const loadedFor = useRef<string | null>(null)
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false)
+  const [linkPickerLabel, setLinkPickerLabel] = useState('')
+  const loadGeneration = useRef(0)
+  const editorReady = useRef(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editorRef = useRef<BlockNoteEditor | null>(null)
 
-  const editor = useCreateBlockNote()
+  const editor = useCreateBlockNote(
+    {
+      uploadFile: uploadFileForNotepad,
+    },
+    [documentId],
+  )
+  editorRef.current = editor
 
-  useEffect(() => {
-    if (!doc || doc.type !== 'markdown') return
-    if (loadedFor.current === documentId) return
-    loadedFor.current = documentId
-    void (async () => {
-      const blocks = await editor.tryParseMarkdownToBlocks(doc.content)
-      editor.replaceBlocks(editor.document, blocks)
-    })()
-  }, [documentId, doc, editor])
+  const flushSave = useCallback(
+    (ed: BlockNoteEditor) => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
+      }
+      const editorContent = serializeEditorBlocks(ed)
+      const content = markdownSnapshot(ed)
+      updateEditorState(documentId, { editorContent, content })
+      setSaveStatus('saved')
+    },
+    [documentId, setSaveStatus, updateEditorState],
+  )
 
-  const persistMarkdown = useCallback(
-    (markdown: string) => {
+  const scheduleSave = useCallback(
+    (ed: BlockNoteEditor) => {
+      if (!editorReady.current) return
       if (saveTimer.current) clearTimeout(saveTimer.current)
       setSaveStatus('saving')
       saveTimer.current = setTimeout(() => {
-        update(documentId, markdown)
-        setSaveStatus('saved')
+        flushSave(ed)
+        saveTimer.current = null
       }, SAVE_DEBOUNCE_MS)
     },
-    [documentId, setSaveStatus, update],
+    [flushSave, setSaveStatus],
   )
+
+  useEffect(() => {
+    editorReady.current = false
+    const generation = ++loadGeneration.current
+    const currentDoc = useSchemaStore.getState().workspaceDocuments[documentId]
+    if (!currentDoc || currentDoc.type !== 'markdown') return
+
+    let cancelled = false
+    void (async () => {
+      const blocks = await blocksForDocument(editor, currentDoc)
+      if (cancelled || generation !== loadGeneration.current) return
+      editor.replaceBlocks(editor.document, blocks as typeof editor.document)
+      editorReady.current = true
+      if (!currentDoc.editorContent && blocks.length > 0) {
+        const editorContent = JSON.stringify(blocks)
+        const content = editor.blocksToMarkdownLossy(blocks as typeof editor.document)
+        updateEditorState(documentId, { editorContent, content })
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (editorReady.current && editorRef.current) {
+        flushSave(editorRef.current)
+      }
+      editorReady.current = false
+    }
+  }, [documentId, editor, flushSave, updateEditorState])
 
   const onEditorClick = useCallback(
     (e: React.MouseEvent) => {
@@ -87,9 +131,7 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
   )
 
   const findTreeItemId = useCallback(() => {
-    const walk = (
-      nodes: typeof workspaceTree,
-    ): string | null => {
+    const walk = (nodes: typeof workspaceTree): string | null => {
       for (const n of nodes) {
         if (n.documentId === documentId) return n.id
         if (n.children) {
@@ -102,28 +144,32 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
     return walk(workspaceTree)
   }, [documentId, workspaceTree])
 
-  const insertInternalLink = () => {
-    const title = window.prompt('Link to document (name):')
-    if (!title) return
-    const id = resolveDocumentIdByTitle(title, workspaceDocuments)
-    const text = id
-      ? workspaceDocumentHref(id)
-      : wikiLinkPattern(title)
-    void editor.insertInlineContent([
-      { type: 'link', href: text, content: title },
-    ])
+  const openLinkPicker = () => {
+    const selected = editor.getSelectedText().trim()
+    setLinkPickerLabel(selected || 'Link')
+    setLinkPickerOpen(true)
+  }
+
+  const applyInternalLink = (target: {
+    documentId: string
+    name: string
+  }) => {
+    const url = workspaceDocumentHref(target.documentId)
+    const label =
+      linkPickerLabel && linkPickerLabel !== 'Link'
+        ? linkPickerLabel
+        : target.name.replace(/\.md$/i, '')
+    editor.createLink(url, label)
   }
 
   const exportMd = () => {
     if (!doc) return
-    const md = editor.blocksToMarkdownLossy(editor.document)
-    downloadDocumentMarkdown(doc.name, md)
+    downloadDocumentMarkdown(doc.name, markdownSnapshot(editor))
   }
 
   const exportPdf = async () => {
     if (!doc) return
-    const md = editor.blocksToMarkdownLossy(editor.document)
-    await downloadDocumentPdf(doc.name, md)
+    await downloadDocumentPdf(doc.name, markdownSnapshot(editor))
   }
 
   if (!doc || doc.type !== 'markdown') {
@@ -143,14 +189,20 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
 
   return (
     <div className="notepad-editor flex min-h-0 flex-1 flex-col" onClick={onEditorClick}>
+      <InternalLinkPicker
+        open={linkPickerOpen}
+        linkLabel={linkPickerLabel}
+        onClose={() => setLinkPickerOpen(false)}
+        onSelect={applyInternalLink}
+      />
       <div
         className="notepad-toolbar flex flex-wrap items-center gap-2 border-b px-4 py-2"
         style={{ borderColor: 'var(--border)' }}
       >
         <span className="text-xs themed-muted">{saveLabel}</span>
         <span className="flex-1" />
-        <button type="button" className="toolbar-btn text-xs" onClick={insertInternalLink}>
-          Link
+        <button type="button" className="toolbar-btn text-xs" onClick={openLinkPicker}>
+          🔗 Link
         </button>
         <button type="button" className="toolbar-btn text-xs" onClick={exportMd}>
           Export Markdown
@@ -193,9 +245,7 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
           <BlockNoteViewRaw
             editor={editor}
             theme={dark ? 'dark' : 'light'}
-            onChange={() => {
-              persistMarkdown(editor.blocksToMarkdownLossy(editor.document))
-            }}
+            onChange={() => scheduleSave(editor)}
           >
             <BlockNoteDefaultUI />
           </BlockNoteViewRaw>

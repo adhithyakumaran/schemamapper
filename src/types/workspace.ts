@@ -19,8 +19,13 @@ export interface WorkspaceDocument {
   id: string
   type: 'markdown' | 'pdf'
   name: string
-  /** Markdown source or PDF data URL */
+  /**
+   * Markdown interchange / search text (updated on save).
+   * Legacy notes may only have this field.
+   */
   content: string
+  /** Canonical BlockNote document JSON (stringified blocks). */
+  editorContent?: string
   createdAt?: number
   updatedAt?: number
   /** Subtle document accent (not board color). */

@@ -533,6 +533,18 @@ body {
   background: var(--surface-secondary);
 }
 
+.link-picker-item {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.link-picker-item:hover,
+.link-picker-item-active {
+  background: var(--surface-secondary);
+}
+
 .nested-tree-meta,
 .nested-tree-rel {
   font-size: 0.65rem;
