@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { ensureDefaultWorkspace } from '../lib/ensureDefaultDocument'
 import { findFirstDocumentInTree } from '../lib/workspaceDisplay'
 import { boardUiForBoard, DEFAULT_WORKSPACE_UI } from './stableDefaults'
 import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
@@ -441,6 +442,7 @@ export const useSchemaStore = create<SchemaStore>()(
           )
           const prev = get().selection
           const docs = get().workspaceDocuments
+          const ui = get().workspaceUi ?? DEFAULT_WORKSPACE_UI
           const selectionValid =
             prev &&
             prev.kind !== 'board' &&
@@ -448,35 +450,22 @@ export const useSchemaStore = create<SchemaStore>()(
               Boolean(docs[prev.documentId])) ||
               (prev.kind === 'pdf' &&
                 Boolean(docs[prev.documentId])))
-          const selection: WorkspaceSelection = selectionValid
-            ? prev
-            : documentSelectionFromTree(workspaceTree, docs)
+          const selection: WorkspaceSelection = selectionValid ? prev : null
 
-          const ui = get().workspaceUi ?? DEFAULT_WORKSPACE_UI
-          let workspaceUi = ui
-          if (
-            selection &&
-            selection.kind !== 'board' &&
-            !ui.tabs.some((t) => t.documentId === selection.documentId)
-          ) {
-            workspaceUi = openDocPatch(
-              { ...get(), workspaceUi: ui },
-              selection.documentId,
-              selection.kind,
-            ).workspaceUi
-          } else if (selection && selection.kind !== 'board') {
-            workspaceUi = {
-              ...ui,
-              activeDocumentId: selection.documentId,
-            }
-          }
+          const workspaceSnapshot = ensureDefaultWorkspace({
+            workspaceDocuments: docs,
+            workspaceTree,
+            workspaceUi: ui,
+            selection,
+          })
 
           set({
             boards,
             boardFiles: existing.length ? get().boardFiles : boardFiles,
-            workspaceTree,
-            workspaceUi,
-            selection,
+            workspaceTree: workspaceSnapshot.workspaceTree,
+            workspaceDocuments: workspaceSnapshot.workspaceDocuments,
+            workspaceUi: workspaceSnapshot.workspaceUi,
+            selection: workspaceSnapshot.selection,
             activeBoardId: null,
             persistenceMode: mode,
             hydrated: true,
@@ -486,13 +475,19 @@ export const useSchemaStore = create<SchemaStore>()(
         } catch {
           const seed = await loadSeedBoards()
           const board = seed[0]
-          const tree = get().workspaceTree
-          const docs = get().workspaceDocuments
+          const snapshot = ensureDefaultWorkspace({
+            workspaceDocuments: get().workspaceDocuments,
+            workspaceTree: get().workspaceTree,
+            workspaceUi: get().workspaceUi ?? DEFAULT_WORKSPACE_UI,
+            selection: null,
+          })
           set({
             boards: board ? [board] : [],
             activeBoardId: null,
-            selection: documentSelectionFromTree(tree, docs),
-            workspaceTree: tree,
+            workspaceTree: snapshot.workspaceTree,
+            workspaceDocuments: snapshot.workspaceDocuments,
+            workspaceUi: snapshot.workspaceUi,
+            selection: snapshot.selection,
             persistenceMode: 'local',
             hydrated: true,
             syncError: null,
@@ -676,13 +671,12 @@ export const useSchemaStore = create<SchemaStore>()(
               ui.activeDocumentId === docId
                 ? (tabs[tabs.length - 1]?.documentId ?? null)
                 : ui.activeDocumentId
-            return {
+            return ensureDefaultWorkspace({
               workspaceTree: tree,
               workspaceDocuments: docs,
               workspaceUi: { ...ui, tabs, activeDocumentId },
               selection,
-              activeBoardId: null,
-            }
+            })
           })
           return
         }

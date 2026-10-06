@@ -32,12 +32,8 @@ export function MainWorkspace() {
     <main className="document-workspace flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--bg)]">
       <WorkspaceTabs />
       {!activeTab || !activeDoc ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-          <p className="text-sm font-medium">Research workspace</p>
-          <p className="max-w-sm text-sm themed-muted">
-            Create a folder, import Markdown or PDF, and open documents in tabs.
-            Your notes live here — not on boards or schema maps.
-          </p>
+        <div className="flex flex-1 items-center justify-center text-sm themed-muted">
+          Loading document…
         </div>
       ) : activeDoc.type === 'markdown' ? (
         <NotepadEditor documentId={activeDoc.id} />

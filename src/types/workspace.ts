@@ -30,6 +30,8 @@ export interface WorkspaceDocument {
   updatedAt?: number
   /** Subtle document accent (not board color). */
   accentColor?: string
+  /** Auto-created blank starter (identity stable across renames). */
+  isDefaultStarter?: boolean
 }
 
 export type WorkspaceTab = {

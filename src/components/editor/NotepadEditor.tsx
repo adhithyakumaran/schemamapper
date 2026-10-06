@@ -49,6 +49,10 @@ export function NotepadEditor({ documentId }: { documentId: string }) {
   const editor = useCreateBlockNote(
     {
       uploadFile: uploadFileForNotepad,
+      placeholders: {
+        default: 'Start writing…',
+        emptyDocument: 'Start writing…',
+      },
     },
     [documentId],
   )
