@@ -5,7 +5,8 @@ import {
 } from '../lib/nodePresentation'
 import { isFolderExpanded } from '../lib/workspaceTree'
 import type { WorkspaceTreeNode } from '../types/workspace'
-import { EMPTY_WORKSPACE_TREE } from '../store/stableDefaults'
+import { filterBoardNodesFromTree } from '../lib/workspaceDisplay'
+import { DEFAULT_WORKSPACE_UI, EMPTY_WORKSPACE_TREE } from '../store/stableDefaults'
 import { useSchemaStore } from '../store/schemaStore'
 
 function WorkspaceItem({
@@ -15,8 +16,14 @@ function WorkspaceItem({
   node: WorkspaceTreeNode
   depth: number
 }) {
-  const selection = useSchemaStore((s) => s.selection)
-  const setSelection = useSchemaStore((s) => s.setSelection)
+  const activeDocumentId = useSchemaStore(
+    (s) => (s.workspaceUi ?? DEFAULT_WORKSPACE_UI).activeDocumentId,
+  )
+  const selectedFolderId = useSchemaStore(
+    (s) => (s.workspaceUi ?? DEFAULT_WORKSPACE_UI).selectedFolderId,
+  )
+  const openWorkspaceDocument = useSchemaStore((s) => s.openWorkspaceDocument)
+  const setSelectedFolderId = useSchemaStore((s) => s.setSelectedFolderId)
   const toggleFolder = useSchemaStore((s) => s.toggleWorkspaceFolder)
   const moveItem = useSchemaStore((s) => s.moveWorkspaceItem)
   const deleteItem = useSchemaStore((s) => s.deleteWorkspaceItem)
@@ -24,24 +31,23 @@ function WorkspaceItem({
   const [dragOver, setDragOver] = useState(false)
 
   const isSelected =
-    (node.type === 'board' &&
-      selection?.kind === 'board' &&
-      selection.boardId === node.boardId) ||
-    ((node.type === 'markdown' || node.type === 'pdf') &&
-      selection?.kind === node.type &&
-      selection.documentId === node.documentId)
+    node.type === 'folder'
+      ? selectedFolderId === node.id
+      : Boolean(
+          node.documentId && activeDocumentId === node.documentId,
+        )
 
   const open = () => {
-    if (node.type === 'board' && node.boardId) {
-      setSelection({ kind: 'board', boardId: node.boardId })
+    if (node.type === 'folder') {
+      setSelectedFolderId(node.id)
       return
     }
     if (node.type === 'markdown' && node.documentId) {
-      setSelection({ kind: 'markdown', documentId: node.documentId })
+      openWorkspaceDocument(node.documentId, 'markdown')
       return
     }
     if (node.type === 'pdf' && node.documentId) {
-      setSelection({ kind: 'pdf', documentId: node.documentId })
+      openWorkspaceDocument(node.documentId, 'pdf')
     }
   }
 
@@ -129,22 +135,6 @@ function WorkspaceItem({
             workspaceItemLabel(node)
           )}
         </button>
-        {node.type === 'board' && node.boardId ? (
-          <button
-            type="button"
-            title="Rename board"
-            className="sidebar-board-action hidden rounded px-1 text-xs group-hover:inline"
-            onClick={() =>
-              setDialog({
-                type: 'board',
-                mode: 'rename',
-                boardId: node.boardId,
-              })
-            }
-          >
-            ✎
-          </button>
-        ) : null}
         {node.type === 'folder' ? (
           <button
             type="button"
@@ -182,7 +172,8 @@ function WorkspaceItem({
 }
 
 export function WorkspaceExplorer() {
-  const tree = useSchemaStore((s) => s.workspaceTree ?? EMPTY_WORKSPACE_TREE)
+  const rawTree = useSchemaStore((s) => s.workspaceTree ?? EMPTY_WORKSPACE_TREE)
+  const tree = filterBoardNodesFromTree(rawTree)
   const moveItem = useSchemaStore((s) => s.moveWorkspaceItem)
   const setDialog = useSchemaStore((s) => s.setDialog)
   const [rootDrag, setRootDrag] = useState(false)

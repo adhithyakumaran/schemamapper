@@ -90,6 +90,7 @@ export interface AppData {
   boardFiles: Record<string, string>
   workspaceTree: WorkspaceTreeNode[]
   workspaceDocuments: Record<string, WorkspaceDocument>
+  workspaceUi: import('./workspace').WorkspaceUiState
   selection: WorkspaceSelection
   boardUiState: Record<string, BoardUiState>
 }

@@ -1,15 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { boardUiForBoard } from '../store/stableDefaults'
-import { normalizeBoardLayout, isGraphLayout } from '../types/layout'
-import { Canvas } from './Canvas'
-import { BoardResearchWorkspace } from './board/BoardResearchWorkspace'
-import { ResearchTableView } from './table/ResearchTableView'
-import { NestedTreeView } from './tree/NestedTreeView'
+import { DEFAULT_WORKSPACE_UI } from '../store/stableDefaults'
 import { useSchemaStore } from '../store/schemaStore'
+import { NotepadEditor } from './editor/NotepadEditor'
+import { WorkspaceTabs } from './workspace/WorkspaceTabs'
 
-const MarkdownPanel = lazy(() =>
-  import('./MarkdownPanel').then((m) => ({ default: m.MarkdownPanel })),
-)
 const PdfPanel = lazy(() =>
   import('./PdfPanel').then((m) => ({ default: m.PdfPanel })),
 )
@@ -23,62 +17,35 @@ function DocFallback() {
 }
 
 export function MainWorkspace() {
-  const selection = useSchemaStore((s) => s.selection)
-  const board = useSchemaStore((s) =>
-    selection?.kind === 'board'
-      ? s.boards.find((b) => b.id === selection.boardId) ?? null
-      : null,
+  const activeId = useSchemaStore(
+    (s) => (s.workspaceUi ?? DEFAULT_WORKSPACE_UI).activeDocumentId,
   )
-  const viewMode = useSchemaStore((s) =>
-    board
-      ? boardUiForBoard(s.boardUiState, board.id).viewMode ?? 'table'
-      : 'table',
+  const tabs = useSchemaStore(
+    (s) => (s.workspaceUi ?? DEFAULT_WORKSPACE_UI).tabs,
   )
+  const docs = useSchemaStore((s) => s.workspaceDocuments)
 
-  if (!selection) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-sm themed-muted">
-        Select a board or document from the workspace.
-      </div>
-    )
-  }
-
-  if (selection.kind === 'markdown') {
-    return (
-      <Suspense fallback={<DocFallback />}>
-        <MarkdownPanel documentId={selection.documentId} />
-      </Suspense>
-    )
-  }
-
-  if (selection.kind === 'pdf') {
-    return (
-      <Suspense fallback={<DocFallback />}>
-        <PdfPanel documentId={selection.documentId} />
-      </Suspense>
-    )
-  }
-
-  if (!board) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-sm themed-muted">
-        Board not found.
-      </div>
-    )
-  }
-
-  const layout = normalizeBoardLayout(board.layout)
-  if (isGraphLayout(layout) || layout === 'freeform') {
-    return <Canvas />
-  }
+  const activeTab = tabs.find((t) => t.documentId === activeId)
+  const activeDoc = activeId ? docs[activeId] : null
 
   return (
-    <BoardResearchWorkspace board={board}>
-      {viewMode === 'tree' ? (
-        <NestedTreeView board={board} />
+    <main className="document-workspace flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--bg)]">
+      <WorkspaceTabs />
+      {!activeTab || !activeDoc ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+          <p className="text-sm font-medium">Research workspace</p>
+          <p className="max-w-sm text-sm themed-muted">
+            Create a folder, import Markdown or PDF, and open documents in tabs.
+            Your notes live here — not on boards or schema maps.
+          </p>
+        </div>
+      ) : activeDoc.type === 'markdown' ? (
+        <NotepadEditor documentId={activeDoc.id} />
       ) : (
-        <ResearchTableView board={board} />
+        <Suspense fallback={<DocFallback />}>
+          <PdfPanel documentId={activeDoc.id} />
+        </Suspense>
       )}
-    </BoardResearchWorkspace>
+    </main>
   )
 }

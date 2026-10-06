@@ -21,6 +21,24 @@ export interface WorkspaceDocument {
   name: string
   /** Markdown source or PDF data URL */
   content: string
+  createdAt?: number
+  updatedAt?: number
+  /** Subtle document accent (not board color). */
+  accentColor?: string
+}
+
+export type WorkspaceTab = {
+  documentId: string
+  kind: 'markdown' | 'pdf'
+}
+
+export type WorkspaceSaveStatus = 'idle' | 'saving' | 'saved'
+
+export interface WorkspaceUiState {
+  tabs: WorkspaceTab[]
+  activeDocumentId: string | null
+  selectedFolderId: string | null
+  saveStatus: WorkspaceSaveStatus
 }
 
 export type WorkspaceSelection =

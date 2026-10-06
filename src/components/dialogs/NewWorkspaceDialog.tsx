@@ -5,11 +5,9 @@ import { Modal } from './Modal'
 export function NewWorkspaceDialog() {
   const dialog = useSchemaStore((s) => s.dialog)
   const setDialog = useSchemaStore((s) => s.setDialog)
-  const importBoard = useSchemaStore((s) => s.importBoard)
   const importMarkdown = useSchemaStore((s) => s.importMarkdownFile)
   const importPdf = useSchemaStore((s) => s.importPdfFile)
 
-  const jsonRef = useRef<HTMLInputElement>(null)
   const mdRef = useRef<HTMLInputElement>(null)
   const pdfRef = useRef<HTMLInputElement>(null)
 
@@ -17,29 +15,9 @@ export function NewWorkspaceDialog() {
 
   const close = () => setDialog(null)
 
-  const onJson = async (file: File) => {
-    try {
-      const board = JSON.parse(await file.text())
-      importBoard(board)
-      close()
-    } catch {
-      alert('Invalid board JSON')
-    }
-  }
-
   return (
-    <Modal title="Create new" onClose={close}>
+    <Modal title="New in workspace" onClose={close}>
       <div className="grid gap-2">
-        <button
-          type="button"
-          className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
-          onClick={() => {
-            close()
-            setDialog({ type: 'board', mode: 'create' })
-          }}
-        >
-          New Board
-        </button>
         <button
           type="button"
           className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
@@ -48,20 +26,15 @@ export function NewWorkspaceDialog() {
             setDialog({ type: 'folder', mode: 'create' })
           }}
         >
+          <span className="ui-glyph" aria-hidden>📁 </span>
           New Folder
-        </button>
-        <button
-          type="button"
-          className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
-          onClick={() => jsonRef.current?.click()}
-        >
-          Import JSON
         </button>
         <button
           type="button"
           className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
           onClick={() => mdRef.current?.click()}
         >
+          <span className="ui-glyph" aria-hidden>📄 </span>
           Import Markdown
         </button>
         <button
@@ -69,20 +42,10 @@ export function NewWorkspaceDialog() {
           className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
           onClick={() => pdfRef.current?.click()}
         >
+          <span className="ui-glyph" aria-hidden>📕 </span>
           Import PDF
         </button>
       </div>
-      <input
-        ref={jsonRef}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) void onJson(file)
-          e.target.value = ''
-        }}
-      />
       <input
         ref={mdRef}
         type="file"

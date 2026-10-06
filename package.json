@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@blocknote/core": "^0.55.0",
+    "@blocknote/react": "^0.55.0",
     "@supabase/supabase-js": "^2.117.2",
     "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.12.0",

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { boardUiForBoard } from './stableDefaults'
+import { findFirstDocumentInTree } from '../lib/workspaceDisplay'
+import { boardUiForBoard, DEFAULT_WORKSPACE_UI } from './stableDefaults'
 import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
 import { createId } from '../lib/ids'
 import { countDescendants } from '../lib/tree'
@@ -69,6 +70,17 @@ interface SchemaStore extends AppData {
   setDialog: (dialog: DialogState) => void
   setEdgeMenu: (menu: EdgeMenuState) => void
   setSelection: (selection: WorkspaceSelection) => void
+  openWorkspaceDocument: (
+    documentId: string,
+    kind: 'markdown' | 'pdf',
+  ) => void
+  closeWorkspaceTab: (documentId: string) => void
+  setActiveWorkspaceTab: (documentId: string) => void
+  setSelectedFolderId: (folderId: string | null) => void
+  renameDocument: (treeItemId: string, name: string) => void
+  setWorkspaceSaveStatus: (
+    status: import('../types/workspace').WorkspaceSaveStatus,
+  ) => void
   hydrateFromServer: () => Promise<void>
   reloadFromServer: () => Promise<void>
   applyActiveBoardLayout: () => void
@@ -163,6 +175,41 @@ function selectionBoardId(selection: WorkspaceSelection): string | null {
   return selection?.kind === 'board' ? selection.boardId : null
 }
 
+function openDocPatch(
+  state: AppData & { workspaceUi: typeof DEFAULT_WORKSPACE_UI },
+  documentId: string,
+  kind: 'markdown' | 'pdf',
+) {
+  const ui = state.workspaceUi ?? DEFAULT_WORKSPACE_UI
+  const has = ui.tabs.some((t) => t.documentId === documentId)
+  const tabs = has ? ui.tabs : [...ui.tabs, { documentId, kind }]
+  return {
+    workspaceUi: {
+      ...ui,
+      tabs,
+      activeDocumentId: documentId,
+    },
+    selection:
+      kind === 'markdown'
+        ? ({ kind: 'markdown', documentId } as WorkspaceSelection)
+        : ({ kind: 'pdf', documentId } as WorkspaceSelection),
+    activeBoardId: null,
+  }
+}
+
+function documentSelectionFromTree(
+  tree: WorkspaceTreeNode[],
+  docs: Record<string, WorkspaceDocument>,
+): WorkspaceSelection {
+  const first = findFirstDocumentInTree(tree)
+  if (first && docs[first.documentId]) {
+    return first.kind === 'markdown'
+      ? { kind: 'markdown', documentId: first.documentId }
+      : { kind: 'pdf', documentId: first.documentId }
+  }
+  return null
+}
+
 function applyLayout(board: Board, layout: BoardLayoutType): Board {
   if (layout === 'nested-tree') return board
   if (layout === 'freeform') return schema.restoreFreeformPositions(board)
@@ -250,6 +297,7 @@ export const useSchemaStore = create<SchemaStore>()(
       boardFiles: {},
       workspaceTree: [],
       workspaceDocuments: {},
+      workspaceUi: { ...DEFAULT_WORKSPACE_UI },
       selection: null,
       boardUiState: {},
       hydrated: false,
@@ -263,11 +311,106 @@ export const useSchemaStore = create<SchemaStore>()(
       setDialog: (dialog) => set({ dialog }),
       setEdgeMenu: (edgeMenu) => set({ edgeMenu }),
 
-      setSelection: (selection) =>
-        set({
-          selection,
-          activeBoardId: selectionBoardId(selection),
-        }),
+      setSelection: (selection) => {
+        if (selection?.kind === 'board') {
+          set({ selection: null, activeBoardId: null })
+          return
+        }
+        if (
+          selection?.kind === 'markdown' ||
+          selection?.kind === 'pdf'
+        ) {
+          set((state) => ({
+            ...openDocPatch(state, selection.documentId, selection.kind),
+          }))
+          return
+        }
+        set({ selection: null, activeBoardId: null })
+      },
+
+      openWorkspaceDocument: (documentId, kind) => {
+        set((state) => openDocPatch(state, documentId, kind))
+      },
+
+      closeWorkspaceTab: (documentId) => {
+        set((state) => {
+          const ui = state.workspaceUi ?? DEFAULT_WORKSPACE_UI
+          const tabs = ui.tabs.filter((t) => t.documentId !== documentId)
+          const closingActive = ui.activeDocumentId === documentId
+          const nextActive = closingActive
+            ? (tabs[tabs.length - 1]?.documentId ?? null)
+            : ui.activeDocumentId
+          const nextTab = tabs.find((t) => t.documentId === nextActive)
+          const selection: WorkspaceSelection = nextTab
+            ? nextTab.kind === 'markdown'
+              ? { kind: 'markdown', documentId: nextTab.documentId }
+              : { kind: 'pdf', documentId: nextTab.documentId }
+            : null
+          return {
+            workspaceUi: {
+              ...ui,
+              tabs,
+              activeDocumentId: nextActive,
+            },
+            selection,
+            activeBoardId: null,
+          }
+        })
+      },
+
+      setActiveWorkspaceTab: (documentId) => {
+        set((state) => {
+          const tab = state.workspaceUi.tabs.find(
+            (t) => t.documentId === documentId,
+          )
+          if (!tab) return state
+          return {
+            ...openDocPatch(state, documentId, tab.kind),
+          }
+        })
+      },
+
+      setSelectedFolderId: (folderId) =>
+        set((state) => ({
+          workspaceUi: {
+            ...(state.workspaceUi ?? DEFAULT_WORKSPACE_UI),
+            selectedFolderId: folderId,
+          },
+        })),
+
+      renameDocument: (treeItemId, name) => {
+        const trimmed = name.trim()
+        if (!trimmed) return
+        set((state) => {
+          const node = findInTree(state.workspaceTree, treeItemId)
+          let docs = state.workspaceDocuments
+          if (
+            node &&
+            (node.type === 'markdown' || node.type === 'pdf') &&
+            node.documentId
+          ) {
+            const doc = docs[node.documentId]
+            if (doc) {
+              docs = {
+                ...docs,
+                [node.documentId]: { ...doc, name: trimmed },
+              }
+            }
+          }
+          return {
+            workspaceTree: renameNode(state.workspaceTree, treeItemId, trimmed),
+            workspaceDocuments: docs,
+          }
+        })
+      },
+
+      setWorkspaceSaveStatus: (saveStatus) =>
+        set((state) => ({
+          workspaceUi: {
+            ...(state.workspaceUi ?? DEFAULT_WORKSPACE_UI),
+            saveStatus,
+          },
+        })),
 
       hydrateFromServer: async () => {
         if (get().hydrated) return
@@ -293,26 +436,44 @@ export const useSchemaStore = create<SchemaStore>()(
             get().workspaceTree,
           )
           const prev = get().selection
+          const docs = get().workspaceDocuments
           const selectionValid =
             prev &&
-            ((prev.kind === 'board' &&
-              boards.some((b) => b.id === prev.boardId)) ||
-              (prev.kind === 'markdown' &&
-                Boolean(get().workspaceDocuments[prev.documentId])) ||
+            prev.kind !== 'board' &&
+            ((prev.kind === 'markdown' &&
+              Boolean(docs[prev.documentId])) ||
               (prev.kind === 'pdf' &&
-                Boolean(get().workspaceDocuments[prev.documentId])))
+                Boolean(docs[prev.documentId])))
           const selection: WorkspaceSelection = selectionValid
             ? prev
-            : boards[0]
-              ? { kind: 'board' as const, boardId: boards[0].id }
-              : null
+            : documentSelectionFromTree(workspaceTree, docs)
+
+          const ui = get().workspaceUi ?? DEFAULT_WORKSPACE_UI
+          let workspaceUi = ui
+          if (
+            selection &&
+            selection.kind !== 'board' &&
+            !ui.tabs.some((t) => t.documentId === selection.documentId)
+          ) {
+            workspaceUi = openDocPatch(
+              { ...get(), workspaceUi: ui },
+              selection.documentId,
+              selection.kind,
+            ).workspaceUi
+          } else if (selection && selection.kind !== 'board') {
+            workspaceUi = {
+              ...ui,
+              activeDocumentId: selection.documentId,
+            }
+          }
 
           set({
             boards,
             boardFiles: existing.length ? get().boardFiles : boardFiles,
             workspaceTree,
+            workspaceUi,
             selection,
-            activeBoardId: selectionBoardId(selection),
+            activeBoardId: null,
             persistenceMode: mode,
             hydrated: true,
             syncError: null,
@@ -321,15 +482,13 @@ export const useSchemaStore = create<SchemaStore>()(
         } catch {
           const seed = await loadSeedBoards()
           const board = seed[0]
+          const tree = get().workspaceTree
+          const docs = get().workspaceDocuments
           set({
             boards: board ? [board] : [],
-            activeBoardId: board?.id ?? null,
-            selection: board
-              ? { kind: 'board' as const, boardId: board.id }
-              : null,
-            workspaceTree: board
-              ? [createBoardRefNode(board.id, board.name)]
-              : [],
+            activeBoardId: null,
+            selection: documentSelectionFromTree(tree, docs),
+            workspaceTree: tree,
             persistenceMode: 'local',
             hydrated: true,
             syncError: null,
@@ -441,9 +600,7 @@ export const useSchemaStore = create<SchemaStore>()(
       },
 
       renameWorkspaceItem: (itemId, name) => {
-        set((state) => ({
-          workspaceTree: renameNode(state.workspaceTree, itemId, name),
-        }))
+        get().renameDocument(itemId, name)
       },
 
       deleteBoard: (boardId) => {
@@ -509,11 +666,18 @@ export const useSchemaStore = create<SchemaStore>()(
             ) {
               selection = null
             }
+            const ui = state.workspaceUi ?? DEFAULT_WORKSPACE_UI
+            const tabs = ui.tabs.filter((t) => t.documentId !== docId)
+            const activeDocumentId =
+              ui.activeDocumentId === docId
+                ? (tabs[tabs.length - 1]?.documentId ?? null)
+                : ui.activeDocumentId
             return {
               workspaceTree: tree,
               workspaceDocuments: docs,
+              workspaceUi: { ...ui, tabs, activeDocumentId },
               selection,
-              activeBoardId: selectionBoardId(selection),
+              activeBoardId: null,
             }
           })
           return
@@ -735,21 +899,23 @@ export const useSchemaStore = create<SchemaStore>()(
 
       importMarkdownFile: async (file) => {
         const text = await file.text()
+        const now = Date.now()
         const doc: WorkspaceDocument = {
           id: createId('doc'),
           type: 'markdown',
           name: file.name,
           content: text,
+          createdAt: now,
+          updatedAt: now,
         }
         set((state) => ({
+          ...openDocPatch(state, doc.id, 'markdown'),
           workspaceDocuments: { ...state.workspaceDocuments, [doc.id]: doc },
           workspaceTree: insertNode(
             state.workspaceTree,
-            null,
+            state.workspaceUi?.selectedFolderId ?? null,
             createDocumentRefNode(doc),
           ),
-          selection: { kind: 'markdown', documentId: doc.id },
-          activeBoardId: null,
         }))
       },
 
@@ -761,21 +927,23 @@ export const useSchemaStore = create<SchemaStore>()(
             '',
           ),
         )
+        const now = Date.now()
         const doc: WorkspaceDocument = {
           id: createId('doc'),
           type: 'pdf',
           name: file.name,
           content: `data:application/pdf;base64,${base64}`,
+          createdAt: now,
+          updatedAt: now,
         }
         set((state) => ({
+          ...openDocPatch(state, doc.id, 'pdf'),
           workspaceDocuments: { ...state.workspaceDocuments, [doc.id]: doc },
           workspaceTree: insertNode(
             state.workspaceTree,
-            null,
+            state.workspaceUi?.selectedFolderId ?? null,
             createDocumentRefNode(doc),
           ),
-          selection: { kind: 'pdf', documentId: doc.id },
-          activeBoardId: null,
         }))
       },
 
@@ -786,7 +954,11 @@ export const useSchemaStore = create<SchemaStore>()(
           return {
             workspaceDocuments: {
               ...state.workspaceDocuments,
-              [documentId]: { ...doc, content },
+              [documentId]: {
+                ...doc,
+                content,
+                updatedAt: Date.now(),
+              },
             },
           }
         })
@@ -925,6 +1097,7 @@ export const useSchemaStore = create<SchemaStore>()(
           boardFiles: p?.boardFiles ?? current.boardFiles,
           workspaceTree: p?.workspaceTree ?? current.workspaceTree,
           workspaceDocuments: p?.workspaceDocuments ?? current.workspaceDocuments,
+          workspaceUi: p?.workspaceUi ?? current.workspaceUi ?? DEFAULT_WORKSPACE_UI,
           boardUiState: p?.boardUiState ?? current.boardUiState ?? {},
           selection: p?.selection ?? current.selection,
           activeBoardId: p?.activeBoardId ?? current.activeBoardId,
@@ -936,6 +1109,7 @@ export const useSchemaStore = create<SchemaStore>()(
         boardFiles: state.boardFiles,
         workspaceTree: state.workspaceTree,
         workspaceDocuments: state.workspaceDocuments,
+        workspaceUi: state.workspaceUi ?? DEFAULT_WORKSPACE_UI,
         selection: state.selection,
         activeBoardId: state.activeBoardId,
         boardUiState: state.boardUiState ?? {},

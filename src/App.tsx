@@ -1,54 +1,24 @@
 import { useEffect, useState } from 'react'
-import { BoardColorPicker } from './components/BoardColorPicker'
 import { WorkspaceExplorer } from './components/WorkspaceExplorer'
 import { MainWorkspace } from './components/MainWorkspace'
-import { EdgeContextMenu } from './components/EdgeContextMenu'
-import { NodeMenu } from './components/NodeMenu'
-import { AddNodeDialog } from './components/dialogs/AddNodeDialog'
-import { BoardDialog } from './components/dialogs/BoardDialog'
-import { DeleteNodeDialog } from './components/dialogs/DeleteNodeDialog'
-import { EditNodeDialog } from './components/dialogs/EditNodeDialog'
 import { FolderDialog } from './components/dialogs/FolderDialog'
 import { NewWorkspaceDialog } from './components/dialogs/NewWorkspaceDialog'
-import { NoteDialog } from './components/dialogs/NoteDialog'
 import { SyncStatusBar } from './components/SyncStatusBar'
 import { ThemeToggle } from './components/ThemeToggle'
-import { EMPTY_WORKSPACE_DOCUMENTS } from './store/stableDefaults'
-import { BoardViewToggle } from './components/board/BoardViewToggle'
+import { WorkspaceSearch } from './components/workspace/WorkspaceSearch'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
   const setDialog = useSchemaStore((s) => s.setDialog)
-  const selection = useSchemaStore((s) => s.selection)
-  const board = useSchemaStore((s) =>
-    selection?.kind === 'board'
-      ? s.boards.find((b) => b.id === selection.boardId) ?? null
-      : null,
-  )
-  const md = useSchemaStore((s) =>
-    selection?.kind === 'markdown' && selection.documentId
-      ? (s.workspaceDocuments ?? EMPTY_WORKSPACE_DOCUMENTS)[
-          selection.documentId
-        ]
-      : null,
-  )
-  const pdf = useSchemaStore((s) =>
-    selection?.kind === 'pdf' && selection.documentId
-      ? (s.workspaceDocuments ?? EMPTY_WORKSPACE_DOCUMENTS)[
-          selection.documentId
-        ]
-      : null,
-  )
 
   return (
     <header className="app-header flex h-12 shrink-0 items-center justify-between border-b px-4 shadow-sm">
       <div className="min-w-0 truncate text-sm font-semibold tracking-tight">
-        {board ? board.name : md ? `📄 ${md.name}` : pdf ? `📕 ${pdf.name}` : 'Schema Mapper'}
+        Schema Mapper
       </div>
       <div className="flex items-center gap-3">
-        {board ? <BoardViewToggle boardId={board.id} /> : null}
+        <WorkspaceSearch />
         <ThemeToggle />
-        {board ? <BoardColorPicker /> : null}
         <button
           type="button"
           className="btn-primary rounded-md px-3 py-1.5 text-sm font-medium"
@@ -133,15 +103,8 @@ export default function App() {
         <WorkspaceExplorer />
         <MainWorkspace />
       </div>
-      <BoardDialog />
       <FolderDialog />
       <NewWorkspaceDialog />
-      <AddNodeDialog />
-      <EditNodeDialog />
-      <NoteDialog />
-      <DeleteNodeDialog />
-      <NodeMenu />
-      <EdgeContextMenu />
     </div>
   )
 }

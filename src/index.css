@@ -473,6 +473,66 @@ body {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--relationship-edge) 40%, transparent);
 }
 
+.workspace-tabs {
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+}
+
+.workspace-tab {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: var(--surface-secondary);
+  margin-bottom: -1px;
+}
+
+.workspace-tab-active {
+  background: var(--surface);
+  border-color: var(--border);
+  z-index: 1;
+}
+
+.workspace-tab-label {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.workspace-tab-close {
+  border: none;
+  background: transparent;
+  padding: 4px 8px 4px 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.notepad-editor .bn-editor {
+  min-height: 360px;
+  padding: 0;
+}
+
+.notepad-page {
+  color: var(--text);
+}
+
+.notepad-title {
+  color: var(--text);
+}
+
+.workspace-search {
+  background: var(--surface-secondary);
+}
+
 .nested-tree-meta,
 .nested-tree-rel {
   font-size: 0.65rem;
