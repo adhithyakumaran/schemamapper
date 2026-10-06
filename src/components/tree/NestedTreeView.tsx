@@ -4,7 +4,6 @@ import { nodeDisplayIcon } from '../../lib/nodePresentation'
 import { boardUiForBoard } from '../../store/stableDefaults'
 import { useSchemaStore } from '../../store/schemaStore'
 import type { Board, SchemaNode } from '../../types/schema'
-import { SchemaBoardToolbar } from '../SchemaBoardToolbar'
 
 function connectionCount(board: Board, nodeId: string): number {
   return (board.connections ?? []).filter(
@@ -36,6 +35,7 @@ function TreeNodeRow({
   ) => void
 }) {
   const setDialog = useSchemaStore((s) => s.setDialog)
+  const setDetailPanel = useSchemaStore((s) => s.setBoardDetailPanel)
   const kids = childrenOf(board.nodes, node.id)
   const expanded = kids.length > 0 && !collapsedIds.has(node.id)
   const selected = selectedId === node.id
@@ -116,6 +116,34 @@ function TreeNodeRow({
             ↔ {rels}
           </span>
         ) : null}
+        <span className="nested-tree-actions">
+          <button
+            type="button"
+            className={`nested-tree-action ${node.note?.trim() ? 'nested-tree-action-active' : ''}`}
+            title="Note"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDialog({ type: 'note', nodeId: node.id })
+            }}
+          >
+            📝
+          </button>
+          <button
+            type="button"
+            className={`nested-tree-action ${(node.screenshots?.length ?? 0) > 0 ? 'nested-tree-action-active' : ''}`}
+            title="Evidence"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDetailPanel(board.id, {
+                kind: 'evidence',
+                nodeId: node.id,
+                imageIndex: 0,
+              })
+            }}
+          >
+            📷
+          </button>
+        </span>
         <button
           type="button"
           className="nested-tree-add"
@@ -128,20 +156,23 @@ function TreeNodeRow({
           +
         </button>
       </div>
-      {expanded &&
-        kids.map((child) => (
-          <TreeNodeRow
-            key={child.id}
-            board={board}
-            node={child}
-            depth={depth + 1}
-            collapsedIds={collapsedIds}
-            selectedId={selectedId}
-            onToggle={onToggle}
-            onSelect={onSelect}
-            onMove={onMove}
-          />
-        ))}
+      {expanded ? (
+        <div className="nested-tree-children">
+          {kids.map((child) => (
+            <TreeNodeRow
+              key={child.id}
+              board={board}
+              node={child}
+              depth={depth + 1}
+              collapsedIds={collapsedIds}
+              selectedId={selectedId}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              onMove={onMove}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -175,9 +206,8 @@ export function NestedTreeView({ board }: { board: Board }) {
 
   return (
     <div className="nested-tree-panel flex min-h-0 flex-1 flex-col">
-      <SchemaBoardToolbar />
       <div className="nested-tree-scroll min-h-0 flex-1 overflow-auto p-4 md:p-6">
-        <div className="nested-tree-root mx-auto max-w-3xl">
+        <div className="nested-tree-root w-full max-w-4xl">
           {roots.length === 0 ? (
             <p className="text-sm themed-muted">No nodes yet. Use + Node to add a root.</p>
           ) : (

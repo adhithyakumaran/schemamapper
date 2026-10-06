@@ -222,21 +222,72 @@ body {
   fill: var(--text) !important;
 }
 
+.dotted-board-canvas {
+  background-color: var(--board-canvas-color, var(--bg));
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text-secondary) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 14px 14px;
+}
+
+.board-view-toggle-active {
+  background: var(--surface-secondary);
+  font-weight: 600;
+}
+
 .nested-tree-panel {
-  background: var(--bg);
+  background: transparent;
 }
 
 .nested-tree-scroll {
-  background: var(--bg);
+  background: transparent;
+}
+
+.nested-tree-children {
+  margin-left: 0.55rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid color-mix(in srgb, var(--text-secondary) 28%, transparent);
+}
+
+.nested-tree-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+}
+
+.nested-tree-row:hover .nested-tree-actions,
+.nested-tree-row-selected .nested-tree-actions {
+  opacity: 1;
+}
+
+.nested-tree-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.75;
+}
+
+.nested-tree-action-active,
+.nested-tree-action:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--surface-secondary) 80%, transparent);
 }
 
 .nested-tree-row {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  max-width: 42rem;
-  padding: 6px 8px;
-  margin: 2px 0;
+  max-width: none;
+  padding: 4px 8px;
+  margin: 1px 0;
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: default;
@@ -287,13 +338,139 @@ body {
 
 .nested-tree-label {
   flex: 1;
-  font-size: 0.875rem;
+  min-width: 0;
+  font-size: 0.8125rem;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--text);
   overflow-wrap: anywhere;
   word-break: break-word;
-  max-width: 20rem;
+}
+
+.research-table-surface {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+.research-table {
+  color: var(--text);
+}
+
+.research-th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--board-canvas-color, var(--bg)));
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.research-tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-secondary) 35%, transparent);
+}
+
+.research-tr:hover {
+  background: color-mix(in srgb, var(--surface-secondary) 65%, transparent);
+}
+
+.research-tr-selected {
+  background: color-mix(in srgb, var(--relationship-edge) 12%, var(--surface)) !important;
+}
+
+.research-td {
+  padding: 6px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  vertical-align: middle;
+}
+
+.research-td-num {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.research-feature-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.research-cell-btn {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px 0;
+  cursor: text;
+}
+
+.research-cell-input {
+  min-width: 4rem;
+}
+
+.research-td-actions {
+  white-space: nowrap;
+}
+
+.research-icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.research-tr:hover .research-icon-btn,
+.research-tr-selected .research-icon-btn,
+.research-icon-btn-active {
+  opacity: 1;
+}
+
+.research-add-col {
+  border: 1px dashed var(--border);
+  background: transparent;
+  border-radius: 4px;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.evidence-panel {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.evidence-panel-header {
+  border-color: var(--border);
+}
+
+.evidence-panel-stage {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--bg) 60%, var(--surface));
+}
+
+.evidence-thumb-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  background: var(--surface);
+}
+
+.evidence-thumb-btn-active {
+  border-color: var(--relationship-edge);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--relationship-edge) 40%, transparent);
 }
 
 .nested-tree-meta,

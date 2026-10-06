@@ -35,6 +35,15 @@ function normalizeNode(raw: Record<string, unknown>): SchemaNode {
     screenshots = [legacyImage]
   }
 
+  let research: Record<string, string> | undefined
+  if (raw.research && typeof raw.research === 'object') {
+    research = {}
+    for (const [k, v] of Object.entries(raw.research as Record<string, unknown>)) {
+      if (typeof v === 'string') research[k] = v
+    }
+    if (Object.keys(research).length === 0) research = undefined
+  }
+
   return {
     id: String(raw.id),
     name: String(raw.name),
@@ -48,6 +57,7 @@ function normalizeNode(raw: Record<string, unknown>): SchemaNode {
     },
     note: String(raw.note ?? ''),
     screenshots,
+    ...(research ? { research } : {}),
   }
 }
 
@@ -79,6 +89,9 @@ export function boardToDocument(board: Board): BoardDocument {
       position: { ...n.position },
       note: n.note ?? '',
       screenshots: [...(n.screenshots ?? [])],
+      ...(n.research && Object.keys(n.research).length
+        ? { research: { ...n.research } }
+        : {}),
     })),
     connections: (board.connections ?? []).map((c) => ({
       id: c.id,
@@ -217,11 +230,32 @@ export function addChildNode(board: Board, parentId: string, name: string): Boar
   return addNode(board, name, parentId)
 }
 
+export function updateNodeResearch(
+  board: Board,
+  nodeId: string,
+  fields: Record<string, string>,
+): Board {
+  return {
+    ...board,
+    nodes: board.nodes.map((n) => {
+      if (n.id !== nodeId) return n
+      const research = { ...(n.research ?? {}), ...fields }
+      for (const key of Object.keys(research)) {
+        if (!research[key]) delete research[key]
+      }
+      return {
+        ...n,
+        research: Object.keys(research).length ? research : undefined,
+      }
+    }),
+  }
+}
+
 export function updateNode(
   board: Board,
   nodeId: string,
   patch: Partial<
-    Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId'>
+    Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId' | 'research'>
   >,
 ): Board {
   if (patch.parentId !== undefined) {

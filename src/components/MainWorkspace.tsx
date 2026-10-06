@@ -1,6 +1,9 @@
 import { lazy, Suspense } from 'react'
+import { boardUiForBoard } from '../store/stableDefaults'
 import { normalizeBoardLayout, isGraphLayout } from '../types/layout'
 import { Canvas } from './Canvas'
+import { BoardResearchWorkspace } from './board/BoardResearchWorkspace'
+import { ResearchTableView } from './table/ResearchTableView'
 import { NestedTreeView } from './tree/NestedTreeView'
 import { useSchemaStore } from '../store/schemaStore'
 
@@ -25,6 +28,11 @@ export function MainWorkspace() {
     selection?.kind === 'board'
       ? s.boards.find((b) => b.id === selection.boardId) ?? null
       : null,
+  )
+  const viewMode = useSchemaStore((s) =>
+    board
+      ? boardUiForBoard(s.boardUiState, board.id).viewMode ?? 'table'
+      : 'table',
   )
 
   if (!selection) {
@@ -64,5 +72,13 @@ export function MainWorkspace() {
     return <Canvas />
   }
 
-  return <NestedTreeView board={board} />
+  return (
+    <BoardResearchWorkspace board={board}>
+      {viewMode === 'tree' ? (
+        <NestedTreeView board={board} />
+      ) : (
+        <ResearchTableView board={board} />
+      )}
+    </BoardResearchWorkspace>
+  )
 }

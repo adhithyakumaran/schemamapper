@@ -12,8 +12,8 @@ export const PRIMARY_LAYOUT_OPTIONS: {
   id: BoardLayoutType
   label: string
 }[] = [
-  { id: 'nested-tree', label: 'Nested Tree' },
-  { id: 'freeform', label: 'Freeform' },
+  { id: 'nested-tree', label: '🌳 Nested Tree' },
+  { id: 'freeform', label: 'Freeform (advanced)' },
 ]
 
 export const EXPERIMENTAL_LAYOUT_OPTIONS: {

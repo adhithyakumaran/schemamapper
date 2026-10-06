@@ -94,7 +94,7 @@ interface SchemaStore extends AppData {
   updateNode: (
     nodeId: string,
     patch: Partial<
-      Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId'>
+      Pick<SchemaNode, 'name' | 'note' | 'screenshots' | 'parentId' | 'research'>
     >,
   ) => void
   updateNodePosition: (nodeId: string, x: number, y: number) => void
@@ -117,6 +117,14 @@ interface SchemaStore extends AppData {
     newParentId: string | null,
     beforeNodeId?: string | null,
   ) => void
+  setBoardViewMode: (boardId: string, viewMode: import('../types/schema').BoardViewMode) => void
+  setBoardDetailPanel: (
+    boardId: string,
+    panel: import('../types/schema').BoardDetailPanelState | null,
+  ) => void
+  updateNodeResearch: (nodeId: string, fields: Record<string, string>) => void
+  addResearchColumn: (boardId: string, label: string) => void
+  setColumnWidth: (boardId: string, columnId: string, width: number) => void
   syncToSupabase: () => Promise<void>
 }
 
@@ -394,6 +402,14 @@ export const useSchemaStore = create<SchemaStore>()(
           selection: { kind: 'board', boardId: board.id },
           boardFiles: { ...state.boardFiles, [board.id]: file },
           workspaceTree: registerBoardInWorkspace(state.workspaceTree, board),
+          boardUiState: {
+            ...(state.boardUiState ?? {}),
+            [board.id]: {
+              ...boardUi(state, board.id),
+              viewMode: 'table',
+              detailPanel: null,
+            },
+          },
         }))
         const mode = get().persistenceMode
         if (mode === 'supabase') {
@@ -674,18 +690,29 @@ export const useSchemaStore = create<SchemaStore>()(
         const mode = get().persistenceMode
 
         const finish = () => {
-          set((state) => ({
-            boards: [
-              ...state.boards.filter((b) => b.id !== laid.id),
-              laid,
-            ],
-            activeBoardId: laid.id,
-            selection: { kind: 'board', boardId: laid.id },
-            boardFiles: { ...state.boardFiles, [laid.id]: file },
-            workspaceTree: registerBoardInWorkspace(state.workspaceTree, laid),
-            layoutFitTick: Date.now(),
-            syncStatus: 'saved',
-          }))
+          set((state) => {
+            const prevUi = boardUi(state, laid.id)
+            return {
+              boards: [
+                ...state.boards.filter((b) => b.id !== laid.id),
+                laid,
+              ],
+              activeBoardId: laid.id,
+              selection: { kind: 'board', boardId: laid.id },
+              boardFiles: { ...state.boardFiles, [laid.id]: file },
+              workspaceTree: registerBoardInWorkspace(state.workspaceTree, laid),
+              layoutFitTick: Date.now(),
+              syncStatus: 'saved',
+              boardUiState: {
+                ...(state.boardUiState ?? {}),
+                [laid.id]: {
+                  ...prevUi,
+                  viewMode: 'table',
+                  detailPanel: null,
+                },
+              },
+            }
+          })
         }
 
         if (mode === 'supabase') {
@@ -803,6 +830,72 @@ export const useSchemaStore = create<SchemaStore>()(
           ),
         }))
         schedulePersist(get, set, boardId)
+      },
+
+      setBoardViewMode: (boardId, viewMode) => {
+        set((state) => {
+          const ui = boardUi(state, boardId)
+          return {
+            boardUiState: {
+              ...(state.boardUiState ?? {}),
+              [boardId]: { ...ui, viewMode },
+            },
+          }
+        })
+      },
+
+      setBoardDetailPanel: (boardId, panel) => {
+        set((state) => {
+          const ui = boardUi(state, boardId)
+          return {
+            boardUiState: {
+              ...(state.boardUiState ?? {}),
+              [boardId]: { ...ui, detailPanel: panel },
+            },
+          }
+        })
+      },
+
+      updateNodeResearch: (nodeId, fields) => {
+        const { activeBoardId } = get()
+        if (!activeBoardId) return
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, activeBoardId, (b) =>
+            schema.updateNodeResearch(b, nodeId, fields),
+          ),
+        }))
+        schedulePersist(get, set, activeBoardId)
+      },
+
+      addResearchColumn: (boardId, label) => {
+        const trimmed = label.trim()
+        if (!trimmed) return
+        const col = { id: createId('col'), label: trimmed }
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, boardId, (b) => ({
+            ...b,
+            researchColumns: [...(b.researchColumns ?? []), col],
+          })),
+        }))
+        schedulePersist(get, set, boardId)
+      },
+
+      setColumnWidth: (boardId, columnId, width) => {
+        set((state) => {
+          const ui = boardUi(state, boardId)
+          return {
+            boardUiState: {
+              ...(state.boardUiState ?? {}),
+              [boardId]: {
+                ...ui,
+                columnWidths: {
+                  ...(ui.columnWidths ?? {}),
+                  [columnId]: width,
+                },
+              },
+            },
+          }
+        })
       },
 
       syncToSupabase: async () => {

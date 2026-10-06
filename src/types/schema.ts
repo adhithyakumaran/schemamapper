@@ -24,7 +24,17 @@ export interface SchemaNode {
   position: NodePosition
   note: string
   screenshots: string[]
+  /** Editable research metadata (type, source, custom columns). */
+  research?: Record<string, string>
 }
+
+export interface ResearchColumnDef {
+  id: string
+  label: string
+  builtIn?: boolean
+}
+
+export type BoardViewMode = 'table' | 'tree'
 
 export const DEFAULT_BOARD_COLOR = '#F8FAFC'
 
@@ -49,6 +59,8 @@ export interface BoardDocument {
   layout?: BoardLayoutType
   /** Saved manual positions when using freeform layout. */
   freeformPositions?: Record<string, NodePosition>
+  /** Custom research columns (built-ins are always available). */
+  researchColumns?: ResearchColumnDef[]
 }
 
 export type Board = BoardDocument
@@ -57,10 +69,19 @@ export interface BoardRegistry {
   entries: { boardId: string; file: string }[]
 }
 
+export interface BoardDetailPanelState {
+  kind: 'evidence' | 'note'
+  nodeId: string
+  imageIndex?: number
+}
+
 export interface BoardUiState {
   /** Collapsed node ids (UI only — not schema). */
   collapsedNodeIds: string[]
   selectedNodeId?: string | null
+  viewMode?: BoardViewMode
+  detailPanel?: BoardDetailPanelState | null
+  columnWidths?: Record<string, number>
 }
 
 export interface AppData {

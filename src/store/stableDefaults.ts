@@ -6,6 +6,8 @@ export const EMPTY_COLLAPSED_NODE_IDS: string[] = []
 export const DEFAULT_BOARD_UI_STATE: BoardUiState = {
   collapsedNodeIds: EMPTY_COLLAPSED_NODE_IDS,
   selectedNodeId: null,
+  viewMode: 'table',
+  detailPanel: null,
 }
 
 export const EMPTY_WORKSPACE_TREE: WorkspaceTreeNode[] = []

@@ -14,6 +14,7 @@ import { NoteDialog } from './components/dialogs/NoteDialog'
 import { SyncStatusBar } from './components/SyncStatusBar'
 import { ThemeToggle } from './components/ThemeToggle'
 import { EMPTY_WORKSPACE_DOCUMENTS } from './store/stableDefaults'
+import { BoardViewToggle } from './components/board/BoardViewToggle'
 import { useSchemaStore } from './store/schemaStore'
 
 function AppHeader() {
@@ -45,6 +46,7 @@ function AppHeader() {
         {board ? board.name : md ? `📄 ${md.name}` : pdf ? `📕 ${pdf.name}` : 'Schema Mapper'}
       </div>
       <div className="flex items-center gap-3">
+        {board ? <BoardViewToggle boardId={board.id} /> : null}
         <ThemeToggle />
         {board ? <BoardColorPicker /> : null}
         <button

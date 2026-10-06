@@ -43,7 +43,7 @@ export function LayoutSelector() {
         className="toolbar-btn"
         onClick={() => setOpen((o) => !o)}
       >
-        Layout ▾
+        Advanced ▾
       </button>
       {open && (
         <div className="themed-menu absolute left-0 top-full z-30 mt-1 min-w-[200px] rounded-md border py-1 shadow-lg">

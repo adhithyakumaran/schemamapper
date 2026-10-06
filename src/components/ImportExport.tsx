@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { downloadBoardJson, downloadBoardPdf, downloadBoardPng } from '../services/boardExport'
+import { exportBoardXlsx, importBoardFromXlsx } from '../services/xlsxResearch'
 import { useSchemaStore } from '../store/schemaStore'
 
 export function ImportExportButtons() {
@@ -8,6 +9,7 @@ export function ImportExportButtons() {
   )
   const importBoard = useSchemaStore((s) => s.importBoard)
   const jsonInputRef = useRef<HTMLInputElement>(null)
+  const xlsxInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -33,16 +35,26 @@ export function ImportExportButtons() {
     }
   }
 
-  const runExport = async (kind: 'json' | 'pdf' | 'png') => {
+  const runExport = async (kind: 'json' | 'pdf' | 'png' | 'xlsx') => {
     if (!board) return
     setExporting(true)
     setExportOpen(false)
     try {
       if (kind === 'json') downloadBoardJson(board)
       else if (kind === 'pdf') await downloadBoardPdf(board)
-      else await downloadBoardPng(board)
+      else if (kind === 'png') await downloadBoardPng(board)
+      else exportBoardXlsx(board)
     } finally {
       setExporting(false)
+    }
+  }
+
+  const onImportXlsx = async (file: File) => {
+    try {
+      const imported = await importBoardFromXlsx(file)
+      importBoard(imported)
+    } catch {
+      alert('Invalid research spreadsheet')
     }
   }
 
@@ -80,15 +92,37 @@ export function ImportExportButtons() {
             >
               PNG
             </button>
+            <button
+              type="button"
+              className="themed-menu-item block w-full px-3 py-1.5 text-left text-xs"
+              onClick={() => runExport('xlsx')}
+            >
+              XLSX
+            </button>
           </div>
         )}
       </div>
       <button
         type="button"
         className="toolbar-btn"
+        onClick={() => runExport('xlsx')}
+        disabled={!board || exporting}
+      >
+        Export XLSX
+      </button>
+      <button
+        type="button"
+        className="toolbar-btn"
         onClick={() => jsonInputRef.current?.click()}
       >
         Import JSON
+      </button>
+      <button
+        type="button"
+        className="toolbar-btn"
+        onClick={() => xlsxInputRef.current?.click()}
+      >
+        Import Excel
       </button>
       <input
         ref={jsonInputRef}
@@ -98,6 +132,17 @@ export function ImportExportButtons() {
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) void onImportJson(file)
+          e.target.value = ''
+        }}
+      />
+      <input
+        ref={xlsxInputRef}
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void onImportXlsx(file)
           e.target.value = ''
         }}
       />
