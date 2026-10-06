@@ -1,6 +1,10 @@
 import { createId } from '../lib/ids'
 import { getDescendantIds } from '../lib/tree'
-import { DEFAULT_BOARD_LAYOUT, type BoardLayoutType } from '../types/layout'
+import {
+  DEFAULT_BOARD_LAYOUT,
+  normalizeBoardLayout,
+  type BoardLayoutType,
+} from '../types/layout'
 import {
   DEFAULT_BOARD_COLOR,
   type Board,
@@ -99,9 +103,9 @@ export function normalizeImportedBoard(raw: unknown): Board {
 
   const nodes = (obj.nodes as Record<string, unknown>[]).map(normalizeNode)
 
-  const layoutRaw = obj.layout
-  const layout =
-    typeof layoutRaw === 'string' ? layoutRaw : DEFAULT_BOARD_LAYOUT
+  const layout = normalizeBoardLayout(
+    typeof obj.layout === 'string' ? obj.layout : undefined,
+  )
 
   let freeformPositions: Record<string, { x: number; y: number }> | undefined
   if (obj.freeformPositions && typeof obj.freeformPositions === 'object') {

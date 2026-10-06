@@ -11,6 +11,7 @@ interface CanvasToolbarProps {
 export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
   const reloadFromServer = useSchemaStore((s) => s.reloadFromServer)
   const applyLayout = useSchemaStore((s) => s.applyActiveBoardLayout)
+  const syncToSupabase = useSchemaStore((s) => s.syncToSupabase)
   const persistenceMode = useSchemaStore((s) => s.persistenceMode)
 
   return (
@@ -50,13 +51,22 @@ export function CanvasToolbar({ rf, onAddNode }: CanvasToolbarProps) {
       </button>
       <ImportExportButtons />
       {persistenceMode === 'supabase' && (
-        <button
-          type="button"
-          className="toolbar-btn"
-          onClick={() => void reloadFromServer()}
-        >
-          Reload
-        </button>
+        <>
+          <button
+            type="button"
+            className="toolbar-btn"
+            onClick={() => void syncToSupabase()}
+          >
+            Sync to Supabase
+          </button>
+          <button
+            type="button"
+            className="toolbar-btn"
+            onClick={() => void reloadFromServer()}
+          >
+            Reload
+          </button>
+        </>
       )}
     </div>
   )

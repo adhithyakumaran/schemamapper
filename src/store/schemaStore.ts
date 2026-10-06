@@ -30,7 +30,13 @@ import {
   syncNodeScreenshots,
   upsertFullBoardToSupabase,
 } from '../services/supabaseBoardService'
-import { DEFAULT_BOARD_LAYOUT, type BoardLayoutType } from '../types/layout'
+import { moveNodeInHierarchy } from '../lib/hierarchyTree'
+import {
+  DEFAULT_BOARD_LAYOUT,
+  isGraphLayout,
+  normalizeBoardLayout,
+  type BoardLayoutType,
+} from '../types/layout'
 import type {
   AppData,
   Board,
@@ -102,6 +108,15 @@ interface SchemaStore extends AppData {
   importPdfFile: (file: File) => Promise<void>
   updateMarkdownDocument: (documentId: string, content: string) => void
   replaceActiveBoard: (board: Board) => void
+  toggleTreeNodeCollapsed: (boardId: string, nodeId: string) => void
+  setTreeSelectedNode: (boardId: string, nodeId: string | null) => void
+  moveHierarchyNode: (
+    boardId: string,
+    nodeId: string,
+    newParentId: string | null,
+    beforeNodeId?: string | null,
+  ) => void
+  syncToSupabase: () => Promise<void>
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -140,18 +155,32 @@ function selectionBoardId(selection: WorkspaceSelection): string | null {
 }
 
 function applyLayout(board: Board, layout: BoardLayoutType): Board {
+  if (layout === 'nested-tree') return board
   if (layout === 'freeform') return schema.restoreFreeformPositions(board)
-  return layoutBoard(board, layout)
+  if (isGraphLayout(layout)) return layoutBoard(board, layout)
+  return board
 }
 
 function transitionLayout(board: Board, next: BoardLayoutType): Board {
-  const current = board.layout ?? DEFAULT_BOARD_LAYOUT
+  const current = normalizeBoardLayout(board.layout)
   let b = board
   if (current === 'freeform' && next !== 'freeform') {
     b = schema.snapshotFreeformPositions(b)
   }
   b = { ...b, layout: next }
   return applyLayout(b, next)
+}
+
+function boardUi(
+  state: { boardUiState: Record<string, import('../types/schema').BoardUiState> },
+  boardId: string,
+) {
+  return (
+    state.boardUiState[boardId] ?? {
+      collapsedNodeIds: [],
+      selectedNodeId: null,
+    }
+  )
 }
 
 function schedulePersist(
@@ -216,6 +245,7 @@ export const useSchemaStore = create<SchemaStore>()(
       workspaceTree: [],
       workspaceDocuments: {},
       selection: null,
+      boardUiState: {},
       hydrated: false,
       persistenceMode: 'local',
       syncStatus: 'idle',
@@ -241,8 +271,9 @@ export const useSchemaStore = create<SchemaStore>()(
           let layoutFitTick = 0
           boards = boards.map((b) => {
             if (!boardNeedsInitialLayout(b)) return b
-            const layout = b.layout ?? DEFAULT_BOARD_LAYOUT
-            if (layout === 'freeform') return b
+            const layout = normalizeBoardLayout(b.layout)
+            if (layout === 'freeform' || layout === 'nested-tree') return b
+            if (!isGraphLayout(layout)) return b
             layoutFitTick = Date.now()
             return layoutBoard(b, layout)
           })
@@ -325,7 +356,8 @@ export const useSchemaStore = create<SchemaStore>()(
         if (!boardId) return
         const board = get().boards.find((b) => b.id === boardId)
         if (!board) return
-        const layout = board.layout ?? DEFAULT_BOARD_LAYOUT
+        const layout = normalizeBoardLayout(board.layout)
+        if (layout === 'nested-tree') return
         set((state) => ({
           boards: schema.updateBoardInList(state.boards, boardId, (b) =>
             applyLayout(b, layout),
@@ -623,11 +655,13 @@ export const useSchemaStore = create<SchemaStore>()(
 
       importBoard: (rawBoard) => {
         const board = schema.normalizeImportedBoard(rawBoard)
-        const layout = board.layout ?? DEFAULT_BOARD_LAYOUT
+        const layout = normalizeBoardLayout(board.layout)
         const laid =
-          layout === 'freeform'
+          layout === 'freeform' || layout === 'nested-tree'
             ? board
-            : layoutBoard(board, layout)
+            : isGraphLayout(layout)
+              ? layoutBoard(board, layout)
+              : board
         const file = uniqueFilename(laid.name, get().boardFiles)
         const mode = get().persistenceMode
 
@@ -726,6 +760,58 @@ export const useSchemaStore = create<SchemaStore>()(
       replaceActiveBoard: (rawBoard) => {
         get().importBoard(rawBoard)
       },
+
+      toggleTreeNodeCollapsed: (boardId, nodeId) => {
+        set((state) => {
+          const ui = boardUi(state, boardId)
+          const next = new Set(ui.collapsedNodeIds)
+          if (next.has(nodeId)) next.delete(nodeId)
+          else next.add(nodeId)
+          return {
+            boardUiState: {
+              ...state.boardUiState,
+              [boardId]: { ...ui, collapsedNodeIds: [...next] },
+            },
+          }
+        })
+      },
+
+      setTreeSelectedNode: (boardId, nodeId) => {
+        set((state) => {
+          const ui = boardUi(state, boardId)
+          return {
+            boardUiState: {
+              ...state.boardUiState,
+              [boardId]: { ...ui, selectedNodeId: nodeId },
+            },
+          }
+        })
+      },
+
+      moveHierarchyNode: (boardId, nodeId, newParentId, beforeNodeId) => {
+        set((state) => ({
+          boards: schema.updateBoardInList(state.boards, boardId, (b) =>
+            moveNodeInHierarchy(b, nodeId, newParentId, beforeNodeId),
+          ),
+        }))
+        schedulePersist(get, set, boardId)
+      },
+
+      syncToSupabase: async () => {
+        if (get().persistenceMode !== 'supabase') return
+        set({ syncStatus: 'saving', syncError: null })
+        try {
+          for (const board of get().boards) {
+            await upsertFullBoardToSupabase(board)
+          }
+          set({ syncStatus: 'saved', syncError: null })
+        } catch {
+          set({
+            syncStatus: 'error',
+            syncError: 'Sync to Supabase failed.',
+          })
+        }
+      },
     }),
     {
       name: 'schema-mapper-data-v2',
@@ -736,6 +822,7 @@ export const useSchemaStore = create<SchemaStore>()(
         workspaceDocuments: state.workspaceDocuments,
         selection: state.selection,
         activeBoardId: state.activeBoardId,
+        boardUiState: state.boardUiState,
       }),
     },
   ),

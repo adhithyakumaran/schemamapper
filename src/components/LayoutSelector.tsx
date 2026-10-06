@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  BOARD_LAYOUT_OPTIONS,
+  EXPERIMENTAL_LAYOUT_OPTIONS,
+  PRIMARY_LAYOUT_OPTIONS,
+  normalizeBoardLayout,
   type BoardLayoutType,
 } from '../types/layout'
 import { useSchemaStore } from '../store/schemaStore'
@@ -11,6 +13,7 @@ export function LayoutSelector() {
   )
   const setBoardLayout = useSchemaStore((s) => s.setBoardLayout)
   const [open, setOpen] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -26,7 +29,12 @@ export function LayoutSelector() {
 
   if (!board) return null
 
-  const active = board.layout ?? 'vertical-tree'
+  const active = normalizeBoardLayout(board.layout)
+
+  const pick = (id: BoardLayoutType) => {
+    setBoardLayout(board.id, id)
+    setOpen(false)
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -38,21 +46,38 @@ export function LayoutSelector() {
         Layout ▾
       </button>
       {open && (
-        <div className="themed-menu absolute left-0 top-full z-30 mt-1 min-w-[168px] rounded-md border py-1 shadow-lg">
-          {BOARD_LAYOUT_OPTIONS.map((opt) => (
+        <div className="themed-menu absolute left-0 top-full z-30 mt-1 min-w-[200px] rounded-md border py-1 shadow-lg">
+          {PRIMARY_LAYOUT_OPTIONS.map((opt) => (
             <button
               key={opt.id}
               type="button"
               className="themed-menu-item flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs"
-              onClick={() => {
-                setBoardLayout(board.id, opt.id as BoardLayoutType)
-                setOpen(false)
-              }}
+              onClick={() => pick(opt.id)}
             >
               <span>{opt.label}</span>
               {active === opt.id ? <span aria-hidden>✓</span> : null}
             </button>
           ))}
+          <div className="my-1 border-t" style={{ borderColor: 'var(--border)' }} />
+          <button
+            type="button"
+            className="themed-menu-item block w-full px-3 py-1 text-left text-[10px] uppercase tracking-wide themed-muted"
+            onClick={() => setShowAdvanced((s) => !s)}
+          >
+            {showAdvanced ? '▾' : '▸'} Advanced / Experimental
+          </button>
+          {showAdvanced &&
+            EXPERIMENTAL_LAYOUT_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className="themed-menu-item flex w-full items-center justify-between gap-2 px-3 py-1.5 pl-5 text-left text-xs themed-muted"
+                onClick={() => pick(opt.id)}
+              >
+                <span>{opt.label}</span>
+                {active === opt.id ? <span aria-hidden>✓</span> : null}
+              </button>
+            ))}
         </div>
       )}
     </div>

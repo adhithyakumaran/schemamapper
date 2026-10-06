@@ -1,6 +1,6 @@
 import katalonSeed from '../../data/boards/katalon-example.json'
 import { boardNeedsInitialLayout, layoutBoard } from '../lib/layouts'
-import { DEFAULT_BOARD_LAYOUT } from '../types/layout'
+import { isGraphLayout, normalizeBoardLayout } from '../types/layout'
 import { isSupabaseConfigured } from '../lib/supabase'
 import type { Board } from '../types/schema'
 import { createKatalonExampleBoard } from '../data/sampleBoard'
@@ -43,8 +43,9 @@ export async function loadSeedBoards(): Promise<Board[]> {
 function applyInitialLayoutIfNeeded(boards: Board[]): Board[] {
   return boards.map((b) => {
     if (!boardNeedsInitialLayout(b)) return b
-    const layout = b.layout ?? DEFAULT_BOARD_LAYOUT
-    if (layout === 'freeform') return b
+    const layout = normalizeBoardLayout(b.layout)
+    if (layout === 'freeform' || layout === 'nested-tree') return b
+    if (!isGraphLayout(layout)) return b
     return layoutBoard(b, layout)
   })
 }

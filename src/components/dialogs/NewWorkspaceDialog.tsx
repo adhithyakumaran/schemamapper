@@ -5,7 +5,6 @@ import { Modal } from './Modal'
 export function NewWorkspaceDialog() {
   const dialog = useSchemaStore((s) => s.dialog)
   const setDialog = useSchemaStore((s) => s.setDialog)
-  const createFolder = useSchemaStore((s) => s.createFolder)
   const importBoard = useSchemaStore((s) => s.importBoard)
   const importMarkdown = useSchemaStore((s) => s.importMarkdownFile)
   const importPdf = useSchemaStore((s) => s.importPdfFile)
@@ -45,11 +44,8 @@ export function NewWorkspaceDialog() {
           type="button"
           className="themed-input rounded-md px-3 py-2 text-left text-sm hover:bg-[var(--surface-secondary)]"
           onClick={() => {
-            const name = prompt('Folder name', 'Research')
-            if (name?.trim()) {
-              createFolder(name.trim())
-              close()
-            }
+            close()
+            setDialog({ type: 'folder', mode: 'create' })
           }}
         >
           New Folder

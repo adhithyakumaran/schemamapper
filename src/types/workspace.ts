@@ -9,7 +9,10 @@ export interface WorkspaceTreeNode {
   /** Document id when type === 'markdown' | 'pdf' */
   documentId?: string
   children?: WorkspaceTreeNode[]
+  /** @deprecated use expanded */
   collapsed?: boolean
+  /** Default true when omitted */
+  expanded?: boolean
 }
 
 export interface WorkspaceDocument {

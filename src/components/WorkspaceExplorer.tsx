@@ -1,11 +1,10 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { isFolderExpanded } from '../lib/workspaceTree'
 import type { WorkspaceTreeNode } from '../types/workspace'
 import { useSchemaStore } from '../store/schemaStore'
 
 function itemIcon(node: WorkspaceTreeNode): string {
   switch (node.type) {
-    case 'folder':
-      return '📁'
     case 'board':
       return '◇'
     case 'markdown':
@@ -31,7 +30,6 @@ function WorkspaceItem({
   const deleteItem = useSchemaStore((s) => s.deleteWorkspaceItem)
   const setDialog = useSchemaStore((s) => s.setDialog)
   const [dragOver, setDragOver] = useState(false)
-  const dragId = useRef<string | null>(null)
 
   const isSelected =
     (node.type === 'board' &&
@@ -57,6 +55,7 @@ function WorkspaceItem({
 
   const onDropTarget = (e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     setDragOver(false)
     const dragged = e.dataTransfer.getData('text/workspace-item')
     if (!dragged || dragged === node.id) return
@@ -65,51 +64,66 @@ function WorkspaceItem({
     }
   }
 
+  const folderExpanded = node.type === 'folder' && isFolderExpanded(node)
+
   return (
     <li>
       <div
-        className={`group flex items-center gap-1 rounded-md px-1 py-1 ${
+        className={`group flex items-center gap-1 rounded-md px-1 py-0.5 ${
           isSelected ? 'sidebar-board-item active' : 'sidebar-board-item'
         } ${dragOver ? 'ring-1 ring-[var(--text-secondary)]' : ''}`}
-        style={{ paddingLeft: `${depth * 12 + 4}px` }}
-        draggable
+        style={{ paddingLeft: `${depth * 14 + 4}px` }}
+        draggable={node.type !== 'folder'}
         onDragStart={(e) => {
-          dragId.current = node.id
           e.dataTransfer.setData('text/workspace-item', node.id)
           e.dataTransfer.effectAllowed = 'move'
         }}
         onDragOver={(e) => {
           if (node.type === 'folder') {
             e.preventDefault()
+            e.stopPropagation()
             setDragOver(true)
           }
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDropTarget}
+        onContextMenu={(e) => {
+          if (node.type !== 'folder') return
+          e.preventDefault()
+          setDialog({ type: 'folder', mode: 'rename', folderId: node.id })
+        }}
       >
         {node.type === 'folder' ? (
           <button
             type="button"
             className="w-4 shrink-0 text-xs themed-muted"
-            onClick={() => toggleFolder(node.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFolder(node.id)
+            }}
           >
-            {node.collapsed ? '▸' : '▾'}
+            {folderExpanded ? '▾' : '▸'}
           </button>
         ) : (
-          <span className="w-4 shrink-0 text-center text-xs" aria-hidden>
+          <span className="w-4 shrink-0 text-center text-[10px]" aria-hidden>
             {itemIcon(node)}
           </span>
         )}
         <button
           type="button"
-          className="flex-1 truncate text-left text-sm"
-          onClick={() => {
-            if (node.type === 'folder') toggleFolder(node.id)
-            else open()
+          className={`flex-1 truncate text-left ${
+            node.type === 'folder'
+              ? 'text-sm font-semibold'
+              : 'text-sm font-normal'
+          }`}
+          onClick={() => open()}
+          onDoubleClick={() => {
+            if (node.type === 'folder') {
+              setDialog({ type: 'folder', mode: 'rename', folderId: node.id })
+            } else open()
           }}
-          onDoubleClick={() => open()}
         >
-          {node.name}
+          {node.type === 'folder' ? `📁 ${node.name}` : node.name}
         </button>
         {node.type === 'board' && node.boardId ? (
           <button
@@ -122,6 +136,18 @@ function WorkspaceItem({
                 mode: 'rename',
                 boardId: node.boardId,
               })
+            }
+          >
+            ✎
+          </button>
+        ) : null}
+        {node.type === 'folder' ? (
+          <button
+            type="button"
+            title="Rename folder"
+            className="sidebar-board-action hidden rounded px-1 text-xs group-hover:inline"
+            onClick={() =>
+              setDialog({ type: 'folder', mode: 'rename', folderId: node.id })
             }
           >
             ✎
@@ -140,7 +166,7 @@ function WorkspaceItem({
           ×
         </button>
       </div>
-      {node.type === 'folder' && !node.collapsed && node.children?.length ? (
+      {node.type === 'folder' && folderExpanded && node.children?.length ? (
         <ul className="mt-0.5">
           {node.children.map((child) => (
             <WorkspaceItem key={child.id} node={child} depth={depth + 1} />
@@ -164,7 +190,7 @@ export function WorkspaceExplorer() {
         style={{ borderColor: 'var(--border)' }}
       >
         <p className="text-xs font-semibold uppercase tracking-wide themed-muted">
-          Workspace
+          🗂️ Workspace
         </p>
         <button
           type="button"

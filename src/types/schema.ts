@@ -57,6 +57,12 @@ export interface BoardRegistry {
   entries: { boardId: string; file: string }[]
 }
 
+export interface BoardUiState {
+  /** Collapsed node ids (UI only — not schema). */
+  collapsedNodeIds: string[]
+  selectedNodeId?: string | null
+}
+
 export interface AppData {
   boards: Board[]
   activeBoardId: string | null
@@ -64,11 +70,17 @@ export interface AppData {
   workspaceTree: WorkspaceTreeNode[]
   workspaceDocuments: Record<string, WorkspaceDocument>
   selection: WorkspaceSelection
+  boardUiState: Record<string, BoardUiState>
 }
 
 export type DialogState =
   | { type: 'newWorkspace' }
-  | { type: 'folder'; mode: 'create' | 'rename'; folderId?: string }
+  | {
+      type: 'folder'
+      mode: 'create' | 'rename'
+      folderId?: string
+      parentFolderId?: string | null
+    }
   | { type: 'board'; mode: 'create' | 'rename'; boardId?: string }
   | { type: 'addChild'; parentId: string }
   | { type: 'addRoot' }

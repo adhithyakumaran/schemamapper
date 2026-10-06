@@ -11,7 +11,7 @@ export function createFolderNode(name: string): WorkspaceTreeNode {
     type: 'folder',
     name: name.trim() || 'New Folder',
     children: [],
-    collapsed: false,
+    expanded: true,
   }
 }
 
@@ -125,15 +125,22 @@ export function moveNodeInTree(
   return insertNode(without, targetParentId, removed, targetIndex)
 }
 
+export function isFolderExpanded(node: WorkspaceTreeNode): boolean {
+  if (node.type !== 'folder') return true
+  if (node.expanded !== undefined) return node.expanded
+  if (node.collapsed !== undefined) return !node.collapsed
+  return true
+}
+
 export function toggleFolderCollapsed(
   nodes: WorkspaceTreeNode[],
   folderId: string,
 ): WorkspaceTreeNode[] {
-  return mapTree(nodes, (n) =>
-    n.id === folderId && n.type === 'folder'
-      ? { ...n, collapsed: !n.collapsed }
-      : n,
-  )
+  return mapTree(nodes, (n) => {
+    if (n.id !== folderId || n.type !== 'folder') return n
+    const expanded = isFolderExpanded(n)
+    return { ...n, expanded: !expanded, collapsed: undefined }
+  })
 }
 
 export function renameNode(
