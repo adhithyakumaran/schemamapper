@@ -178,7 +178,7 @@ function WorkspaceItem({
 }
 
 export function WorkspaceExplorer() {
-  const tree = useSchemaStore((s) => s.workspaceTree)
+  const tree = useSchemaStore((s) => s.workspaceTree ?? [])
   const moveItem = useSchemaStore((s) => s.moveWorkspaceItem)
   const setDialog = useSchemaStore((s) => s.setDialog)
   const [rootDrag, setRootDrag] = useState(false)

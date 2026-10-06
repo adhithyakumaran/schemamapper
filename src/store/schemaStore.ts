@@ -172,11 +172,11 @@ function transitionLayout(board: Board, next: BoardLayoutType): Board {
 }
 
 function boardUi(
-  state: { boardUiState: Record<string, import('../types/schema').BoardUiState> },
+  state: { boardUiState?: Record<string, import('../types/schema').BoardUiState> },
   boardId: string,
 ) {
   return (
-    state.boardUiState[boardId] ?? {
+    state.boardUiState?.[boardId] ?? {
       collapsedNodeIds: [],
       selectedNodeId: null,
     }
@@ -270,12 +270,13 @@ export const useSchemaStore = create<SchemaStore>()(
             await loadBoardsFromServer(existing)
           let layoutFitTick = 0
           boards = boards.map((b) => {
-            if (!boardNeedsInitialLayout(b)) return b
             const layout = normalizeBoardLayout(b.layout)
-            if (layout === 'freeform' || layout === 'nested-tree') return b
-            if (!isGraphLayout(layout)) return b
+            const withLayout = { ...b, layout }
+            if (!boardNeedsInitialLayout(withLayout)) return withLayout
+            if (layout === 'freeform' || layout === 'nested-tree') return withLayout
+            if (!isGraphLayout(layout)) return withLayout
             layoutFitTick = Date.now()
-            return layoutBoard(b, layout)
+            return { ...layoutBoard(withLayout, layout), layout }
           })
 
           const workspaceTree = ensureWorkspaceTree(
@@ -769,7 +770,7 @@ export const useSchemaStore = create<SchemaStore>()(
           else next.add(nodeId)
           return {
             boardUiState: {
-              ...state.boardUiState,
+              ...(state.boardUiState ?? {}),
               [boardId]: { ...ui, collapsedNodeIds: [...next] },
             },
           }
@@ -781,7 +782,7 @@ export const useSchemaStore = create<SchemaStore>()(
           const ui = boardUi(state, boardId)
           return {
             boardUiState: {
-              ...state.boardUiState,
+              ...(state.boardUiState ?? {}),
               [boardId]: { ...ui, selectedNodeId: nodeId },
             },
           }
@@ -815,6 +816,21 @@ export const useSchemaStore = create<SchemaStore>()(
     }),
     {
       name: 'schema-mapper-data-v2',
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AppData> | undefined
+        return {
+          ...current,
+          ...p,
+          boards: p?.boards ?? current.boards,
+          boardFiles: p?.boardFiles ?? current.boardFiles,
+          workspaceTree: p?.workspaceTree ?? current.workspaceTree,
+          workspaceDocuments: p?.workspaceDocuments ?? current.workspaceDocuments,
+          boardUiState: p?.boardUiState ?? current.boardUiState ?? {},
+          selection: p?.selection ?? current.selection,
+          activeBoardId: p?.activeBoardId ?? current.activeBoardId,
+          hydrated: false,
+        }
+      },
       partialize: (state) => ({
         boards: state.boards,
         boardFiles: state.boardFiles,
@@ -822,7 +838,7 @@ export const useSchemaStore = create<SchemaStore>()(
         workspaceDocuments: state.workspaceDocuments,
         selection: state.selection,
         activeBoardId: state.activeBoardId,
-        boardUiState: state.boardUiState,
+        boardUiState: state.boardUiState ?? {},
       }),
     },
   ),

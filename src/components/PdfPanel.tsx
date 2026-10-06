@@ -1,15 +1,13 @@
-import * as pdfjs from 'pdfjs-dist'
 import { useEffect, useRef, useState } from 'react'
 import { useSchemaStore } from '../store/schemaStore'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
-
 export function PdfPanel({ documentId }: { documentId: string }) {
-  const doc = useSchemaStore((s) => s.workspaceDocuments[documentId])
-  const [pdf, setPdf] = useState<pdfjs.PDFDocumentProxy | null>(null)
+  const doc = useSchemaStore(
+    (s) => (s.workspaceDocuments ?? {})[documentId],
+  )
+  const [pdf, setPdf] = useState<
+    import('pdfjs-dist').PDFDocumentProxy | null
+  >(null)
   const [page, setPage] = useState(1)
   const [numPages, setNumPages] = useState(0)
   const [zoom, setZoom] = useState(1)
@@ -19,6 +17,11 @@ export function PdfPanel({ documentId }: { documentId: string }) {
     if (!doc || doc.type !== 'pdf') return
     let cancelled = false
     void (async () => {
+      const pdfjs = await import('pdfjs-dist')
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url,
+      ).toString()
       const loading = await pdfjs.getDocument({ url: doc.content }).promise
       if (cancelled) return
       setPdf(loading)

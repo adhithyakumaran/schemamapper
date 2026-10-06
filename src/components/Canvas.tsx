@@ -84,9 +84,10 @@ export function Canvas() {
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
       for (const change of changes) {
-        if (change.type === 'position' && change.position) {
-          updateNodePosition(change.id, change.position.x, change.position.y)
-        }
+        if (change.type !== 'position' || !change.position) continue
+        // Persist only when drag ends — updating the store every frame causes a render loop (React #185).
+        if (change.dragging) continue
+        updateNodePosition(change.id, change.position.x, change.position.y)
       }
     },
     [updateNodePosition],

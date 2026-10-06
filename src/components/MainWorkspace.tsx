@@ -1,9 +1,23 @@
+import { lazy, Suspense } from 'react'
 import { normalizeBoardLayout, isGraphLayout } from '../types/layout'
 import { Canvas } from './Canvas'
-import { MarkdownPanel } from './MarkdownPanel'
-import { PdfPanel } from './PdfPanel'
 import { NestedTreeView } from './tree/NestedTreeView'
 import { useSchemaStore } from '../store/schemaStore'
+
+const MarkdownPanel = lazy(() =>
+  import('./MarkdownPanel').then((m) => ({ default: m.MarkdownPanel })),
+)
+const PdfPanel = lazy(() =>
+  import('./PdfPanel').then((m) => ({ default: m.PdfPanel })),
+)
+
+function DocFallback() {
+  return (
+    <div className="flex flex-1 items-center justify-center text-sm themed-muted">
+      Loading document…
+    </div>
+  )
+}
 
 export function MainWorkspace() {
   const selection = useSchemaStore((s) => s.selection)
@@ -22,11 +36,19 @@ export function MainWorkspace() {
   }
 
   if (selection.kind === 'markdown') {
-    return <MarkdownPanel documentId={selection.documentId} />
+    return (
+      <Suspense fallback={<DocFallback />}>
+        <MarkdownPanel documentId={selection.documentId} />
+      </Suspense>
+    )
   }
 
   if (selection.kind === 'pdf') {
-    return <PdfPanel documentId={selection.documentId} />
+    return (
+      <Suspense fallback={<DocFallback />}>
+        <PdfPanel documentId={selection.documentId} />
+      </Suspense>
+    )
   }
 
   if (!board) {

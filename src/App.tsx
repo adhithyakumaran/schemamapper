@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BoardColorPicker } from './components/BoardColorPicker'
 import { WorkspaceExplorer } from './components/WorkspaceExplorer'
 import { MainWorkspace } from './components/MainWorkspace'
@@ -25,12 +25,12 @@ function AppHeader() {
   )
   const md = useSchemaStore((s) =>
     selection?.kind === 'markdown' && selection.documentId
-      ? s.workspaceDocuments[selection.documentId]
+      ? (s.workspaceDocuments ?? {})[selection.documentId]
       : null,
   )
   const pdf = useSchemaStore((s) =>
     selection?.kind === 'pdf' && selection.documentId
-      ? s.workspaceDocuments[selection.documentId]
+      ? (s.workspaceDocuments ?? {})[selection.documentId]
       : null,
   )
 
@@ -57,15 +57,63 @@ function AppHeader() {
 export default function App() {
   const hydrate = useSchemaStore((s) => s.hydrateFromServer)
   const hydrated = useSchemaStore((s) => s.hydrated)
+  const [bootError, setBootError] = useState<string | null>(null)
 
   useEffect(() => {
-    void hydrate()
+    let cancelled = false
+    const run = () => {
+      if (cancelled) return
+      void hydrate().catch(() => {
+        if (cancelled) return
+        setBootError('Failed to load workspace data.')
+        useSchemaStore.setState({ hydrated: true })
+      })
+    }
+    const unsub = useSchemaStore.persist.onFinishHydration(() => {
+      run()
+    })
+    if (useSchemaStore.persist.hasHydrated()) {
+      run()
+    }
+    const timeout = window.setTimeout(() => {
+      if (!useSchemaStore.getState().hydrated) {
+        setBootError(
+          'Loading is taking longer than expected. You can reset local data below.',
+        )
+        useSchemaStore.setState({ hydrated: true })
+      }
+    }, 12_000)
+    return () => {
+      cancelled = true
+      unsub()
+      window.clearTimeout(timeout)
+    }
   }, [hydrate])
 
   if (!hydrated) {
     return (
-      <div className="flex h-full items-center justify-center text-sm themed-muted">
+      <div
+        className="flex min-h-screen w-full items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-secondary)]"
+      >
         Loading workspace…
+      </div>
+    )
+  }
+
+  if (bootError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-sm themed-muted">{bootError}</p>
+        <button
+          type="button"
+          className="btn-primary rounded-md px-3 py-1.5 text-sm"
+          onClick={() => {
+            localStorage.removeItem('schema-mapper-data-v2')
+            window.location.reload()
+          }}
+        >
+          Reset local data & reload
+        </button>
       </div>
     )
   }

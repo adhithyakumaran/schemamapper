@@ -150,7 +150,11 @@ export function NestedTreeView({ board }: { board: Board }) {
   const setSelected = useSchemaStore((s) => s.setTreeSelectedNode)
   const moveHierarchyNode = useSchemaStore((s) => s.moveHierarchyNode)
   const ui = useSchemaStore(
-    (s) => s.boardUiState[board.id] ?? { collapsedNodeIds: [] },
+    (s) =>
+      (s.boardUiState ?? {})[board.id] ?? {
+        collapsedNodeIds: [],
+        selectedNodeId: null,
+      },
   )
 
   const collapsedIds = useMemo(
