@@ -275,10 +275,14 @@ body {
   text-align: center;
 }
 
+.ui-glyph {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  opacity: 0.88;
+}
+
 .nested-tree-icon {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  opacity: 0.9;
+  flex-shrink: 0;
 }
 
 .nested-tree-label {

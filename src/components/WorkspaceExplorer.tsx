@@ -1,20 +1,11 @@
 import { useState } from 'react'
+import {
+  workspaceItemLabel,
+  workspaceLeadingGlyph,
+} from '../lib/nodePresentation'
 import { isFolderExpanded } from '../lib/workspaceTree'
 import type { WorkspaceTreeNode } from '../types/workspace'
 import { useSchemaStore } from '../store/schemaStore'
-
-function itemIcon(node: WorkspaceTreeNode): string {
-  switch (node.type) {
-    case 'board':
-      return '◇'
-    case 'markdown':
-      return '📄'
-    case 'pdf':
-      return '📕'
-    default:
-      return '•'
-  }
-}
 
 function WorkspaceItem({
   node,
@@ -104,10 +95,15 @@ function WorkspaceItem({
           >
             {folderExpanded ? '▾' : '▸'}
           </button>
-        ) : (
-          <span className="w-4 shrink-0 text-center text-[10px]" aria-hidden>
-            {itemIcon(node)}
+        ) : workspaceLeadingGlyph(node) ? (
+          <span
+            className="ui-glyph w-4 shrink-0 text-center"
+            aria-hidden
+          >
+            {workspaceLeadingGlyph(node)}
           </span>
+        ) : (
+          <span className="w-4 shrink-0" aria-hidden />
         )}
         <button
           type="button"
@@ -123,7 +119,14 @@ function WorkspaceItem({
             } else open()
           }}
         >
-          {node.type === 'folder' ? `📁 ${node.name}` : node.name}
+          {node.type === 'folder' ? (
+            <>
+              <span className="ui-glyph" aria-hidden>📁 </span>
+              {node.name}
+            </>
+          ) : (
+            workspaceItemLabel(node)
+          )}
         </button>
         {node.type === 'board' && node.boardId ? (
           <button
@@ -190,7 +193,8 @@ export function WorkspaceExplorer() {
         style={{ borderColor: 'var(--border)' }}
       >
         <p className="text-xs font-semibold uppercase tracking-wide themed-muted">
-          🗂️ Workspace
+          <span className="ui-glyph" aria-hidden>🗂️ </span>
+          Workspace
         </p>
         <button
           type="button"

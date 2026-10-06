@@ -99,15 +99,15 @@ function TreeNodeRow({
           <span className="nested-tree-chevron nested-tree-chevron-leaf">◇</span>
         )}
         {icon ? (
-          <span className="nested-tree-icon" aria-hidden>{icon}</span>
+          <span className="ui-glyph nested-tree-icon" aria-hidden>{icon}</span>
         ) : null}
         <span className="nested-tree-label">{node.name}</span>
         {node.note?.trim() ? (
-          <span className="nested-tree-meta" title="Has note">📝</span>
+          <span className="nested-tree-meta" title="Has note">note</span>
         ) : null}
         {(node.screenshots?.length ?? 0) > 0 ? (
           <span className="nested-tree-meta" title="Evidence">
-            📷 {node.screenshots.length}
+            {node.screenshots.length} img
           </span>
         ) : null}
         {rels > 0 ? (
